@@ -6,12 +6,16 @@
 #   - freezed              (immutable model codegen)
 #   - json_serializable    (JSON mappers)
 #
-# Phase 0 keeps generator options at their defaults so the build succeeds on an
-# empty codegen surface. Schema-affecting Drift options (e.g. datetime storage
-# format) are intentionally deferred to Phase 1 where the schema is defined.
 targets:
   $default:
     builders:
+      drift_dev:
+        options:
+          # Store DateTime columns as ISO-8601 text rather than unix-epoch
+          # integers. Avoids the legacy epoch/UTC ambiguity for the audit
+          # timestamp columns (createdAt/updatedAt) and keeps date-only columns
+          # sortable as strings (PROJECT_PLAN §7, Phase 1 task 4).
+          store_date_time_values_as_text: true
       # Keep generated aggregate files free of analyzer noise.
       source_gen:combining_builder:
         options:
