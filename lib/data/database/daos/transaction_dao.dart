@@ -8,6 +8,46 @@ import '../tables/wallets.dart';
 
 part 'transaction_dao.g.dart';
 
+/// Denormalized read-model for one transaction-list row, produced by the joined
+/// query in [TransactionDao.watchTransactionListRows] (transaction ⨝ wallet ⨝
+/// primary category). It carries exactly what the bespoke row needs, avoiding an
+/// N+1 of per-row category/wallet lookups. The application layer maps it to the
+/// presentational `TransactionListRow` view-model.
+class TransactionListRowData {
+  const TransactionListRowData({
+    required this.id,
+    required this.walletId,
+    required this.type,
+    required this.flowDirection,
+    required this.status,
+    required this.amountMinor,
+    required this.currencyCode,
+    required this.valueDate,
+    required this.walletName,
+    this.note,
+    this.payee,
+    this.primaryCategoryName,
+    this.primaryCategoryColorValue,
+  });
+
+  final int id;
+  final int walletId;
+  final TransactionType type;
+  final FlowDirection flowDirection;
+  final TransactionStatus status;
+  final int amountMinor;
+  final String currencyCode;
+  final DateTime valueDate;
+  final String walletName;
+  final String? note;
+  final String? payee;
+
+  /// Name/color of the transaction's primary (lowest sortOrder) category, or
+  /// null when the transaction has no category links.
+  final String? primaryCategoryName;
+  final int? primaryCategoryColorValue;
+}
+
 /// Data access for [Transactions] and the [TransactionCategories] junction,
 /// including the transaction↔category JOIN and the balance SQL aggregate.
 ///
@@ -137,6 +177,83 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
       ),
     );
   }
+
+  /// Replaces ALL category links for [transactionId] with [links] — deletes the
+  /// existing set, then inserts the new one. Idempotent for a given [links] set.
+  /// Callers that also mutate the transaction row wrap this in one
+  /// `db.transaction(...)` for atomicity (see `TransactionRepository`).
+  Future<void> replaceCategoryLinks(
+    int transactionId,
+    List<TransactionCategoriesCompanion> links,
+  ) async {
+    await (delete(
+      transactionCategories,
+    )..where((t) => t.transactionId.equals(transactionId))).go();
+    if (links.isEmpty) {
+      return;
+    }
+    await batch((Batch b) => b.insertAll(transactionCategories, links));
+  }
+
+  /// Reactive, newest-first list of denormalized [TransactionListRowData] across
+  /// ALL wallets. One query joins each transaction to its wallet and to its
+  /// PRIMARY category (the linked category with the lowest `sortOrder`, then
+  /// lowest id), so the list renders without per-row follow-up queries.
+  ///
+  /// `readsFrom` registers every table the projection depends on, so the stream
+  /// re-emits when a transaction, its wallet, its category, or a link changes.
+  Stream<List<TransactionListRowData>> watchTransactionListRows() {
+    return customSelect(
+      'SELECT t.id AS id, t.wallet_id AS wallet_id, t.type AS type, '
+      't.flow_direction AS flow_direction, t.status AS status, '
+      't.amount_minor AS amount_minor, t.currency_code AS currency_code, '
+      't.value_date AS value_date, t.note AS note, t.payee AS payee, '
+      'w.name AS wallet_name, '
+      'pc.name AS category_name, pc.color_value AS category_color '
+      'FROM transactions t '
+      'JOIN wallets w ON w.id = t.wallet_id '
+      'LEFT JOIN categories pc ON pc.id = ('
+      '  SELECT tc.category_id FROM transaction_categories tc '
+      '  JOIN categories c ON c.id = tc.category_id '
+      '  WHERE tc.transaction_id = t.id '
+      '  ORDER BY c.sort_order, c.id LIMIT 1'
+      ') '
+      'ORDER BY t.value_date DESC, t.id DESC',
+      readsFrom: <ResultSetImplementation<dynamic, dynamic>>{
+        transactions,
+        wallets,
+        categories,
+        transactionCategories,
+      },
+    ).watch().map(
+      (List<QueryRow> rows) => rows.map(_mapListRow).toList(growable: false),
+    );
+  }
+
+  TransactionListRowData _mapListRow(QueryRow row) => TransactionListRowData(
+    id: row.read<int>('id'),
+    walletId: row.read<int>('wallet_id'),
+    type: TransactionType.values[row.read<int>('type')],
+    flowDirection: FlowDirection.values[row.read<int>('flow_direction')],
+    status: TransactionStatus.values[row.read<int>('status')],
+    amountMinor: row.read<int>('amount_minor'),
+    currencyCode: row.read<String>('currency_code'),
+    // value_date is stored as ISO 'yyyy-MM-dd' text (DateOnlyConverter).
+    valueDate: DateTime.parse(row.read<String>('value_date')),
+    walletName: row.read<String>('wallet_name'),
+    note: row.read<String?>('note'),
+    payee: row.read<String?>('payee'),
+    primaryCategoryName: row.read<String?>('category_name'),
+    primaryCategoryColorValue: row.read<int?>('category_color'),
+  );
+
+  /// Raw junction rows (category id + optional allocation) for [transactionId],
+  /// used to prefill the edit form's category selection and splits.
+  Future<List<TransactionCategory>> getCategoryLinksForTransaction(
+    int transactionId,
+  ) => (select(
+    transactionCategories,
+  )..where((t) => t.transactionId.equals(transactionId))).get();
 
   /// JOIN query: the categories attached to [transactionId] via the junction
   /// table. This is the DAO-boundary join required by PROJECT_PLAN Phase 1.

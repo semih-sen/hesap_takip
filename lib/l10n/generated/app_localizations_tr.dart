@@ -158,4 +158,122 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get walletDeleteBlocked =>
       'Bu cüzdanda işlemler var, silinemez. Bunun yerine arşivleyin.';
+
+  @override
+  String get validationInvalidRate => 'Geçersiz kur.';
+
+  @override
+  String get validationSplitMismatch =>
+      'Kategori tutarları işlem tutarıyla eşleşmiyor.';
+
+  @override
+  String get categoryTypeIncome => 'Gelir';
+
+  @override
+  String get categoryTypeExpense => 'Gider';
+
+  @override
+  String get categoriesEmptyTitle => 'Henüz kategori yok';
+
+  @override
+  String get categoriesEmptyMessage => 'İlk kategorinizi ekleyerek başlayın.';
+
+  @override
+  String get categoryAdd => 'Kategori ekle';
+
+  @override
+  String get categoryEdit => 'Kategoriyi düzenle';
+
+  @override
+  String get categoryNameLabel => 'Kategori adı';
+
+  @override
+  String get categoryTypeLabel => 'Tür';
+
+  @override
+  String get categoryTypeLockedHint =>
+      'Kullanılan bir kategorinin türü değiştirilemez.';
+
+  @override
+  String get categoryParentLabel => 'Üst kategori';
+
+  @override
+  String get categoryParentNone => 'Yok (üst kategori)';
+
+  @override
+  String get categoryParentHint =>
+      'İsteğe bağlı. Alt kategori, üst kategorinin türünü alır.';
+
+  @override
+  String get categoryParentDisabledHint =>
+      'Alt kategorileri olan bir kategori başka bir kategoriye taşınamaz.';
+
+  @override
+  String get categoryShowArchived => 'Arşivlileri göster';
+
+  @override
+  String get categoryHideArchived => 'Arşivlileri gizle';
+
+  @override
+  String categoryDeleted(String name) {
+    return '$name silindi';
+  }
+
+  @override
+  String get categoryDeleteBlocked =>
+      'Bu kategori kullanılıyor veya alt kategorileri var, silinemez. Bunun yerine arşivleyin.';
+
+  @override
+  String get transactionAdd => 'İşlem ekle';
+
+  @override
+  String get transactionEdit => 'İşlemi düzenle';
+
+  @override
+  String get transactionDeleted => 'İşlem silindi';
+
+  @override
+  String get transactionTypeIncome => 'Gelir';
+
+  @override
+  String get transactionTypeExpense => 'Gider';
+
+  @override
+  String get transactionTypeTransfer => 'Transfer';
+
+  @override
+  String get transactionWalletLabel => 'Cüzdan';
+
+  @override
+  String get transactionAmountLabel => 'Tutar';
+
+  @override
+  String transactionRateLabel(String from, String base) {
+    return 'Kur ($from → $base)';
+  }
+
+  @override
+  String get transactionDateLabel => 'Tarih';
+
+  @override
+  String get transactionCategoriesLabel => 'Kategoriler';
+
+  @override
+  String get transactionNoCategories =>
+      'Bu tür için kategori yok. Önce bir kategori ekleyin.';
+
+  @override
+  String get transactionSplitLabel => 'Kategorilere böl';
+
+  @override
+  String get transactionNoteLabel => 'Not (isteğe bağlı)';
+
+  @override
+  String get transactionPayeeLabel => 'Alıcı/Ödeyen (isteğe bağlı)';
+
+  @override
+  String get transactionsEmptyTitle => 'Henüz işlem yok';
+
+  @override
+  String get transactionsEmptyMessage => 'İlk gelir veya giderinizi ekleyin.';
 }

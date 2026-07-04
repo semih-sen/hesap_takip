@@ -12,3 +12,18 @@ String accountTypeLabel(AppLocalizations l10n, AccountType type) =>
       AccountType.investment => l10n.accountTypeInvestment,
       AccountType.other => l10n.accountTypeOther,
     };
+
+/// Maps a [CategoryType] to its localized Turkish label.
+String categoryTypeLabel(AppLocalizations l10n, CategoryType type) =>
+    switch (type) {
+      CategoryType.income => l10n.categoryTypeIncome,
+      CategoryType.expense => l10n.categoryTypeExpense,
+    };
+
+/// Maps a [TransactionType] to its localized Turkish label.
+String transactionTypeLabel(AppLocalizations l10n, TransactionType type) =>
+    switch (type) {
+      TransactionType.income => l10n.transactionTypeIncome,
+      TransactionType.expense => l10n.transactionTypeExpense,
+      TransactionType.transfer => l10n.transactionTypeTransfer,
+    };

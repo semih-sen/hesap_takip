@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/currency/amount_parsing.dart';
 import '../../../core/currency/currency.dart';
 import '../../../core/currency/currency_service.dart';
 import '../../../core/currency/money.dart';
@@ -69,21 +70,6 @@ class _WalletFormPageState extends ConsumerState<WalletFormPage> {
     super.dispose();
   }
 
-  /// Parses the initial-balance field using Turkish convention: `.` groups
-  /// thousands and `,` is the decimal separator (e.g. `1.234,56`). Empty is 0.
-  /// Returns null when the input is not a valid number.
-  Decimal? _parseAmount(String raw) {
-    final String trimmed = raw.trim();
-    if (trimmed.isEmpty) {
-      return Decimal.zero;
-    }
-    final String normalized = trimmed
-        .replaceAll(' ', '')
-        .replaceAll('.', '')
-        .replaceAll(',', '.');
-    return Decimal.tryParse(normalized);
-  }
-
   Future<void> _save() async {
     final FormState? form = _formKey.currentState;
     if (form == null || !form.validate()) {
@@ -93,7 +79,7 @@ class _WalletFormPageState extends ConsumerState<WalletFormPage> {
     final CurrencyService service = ref.read(currencyServiceProvider);
     final WalletRepository repo = ref.read(walletRepositoryProvider);
     final Decimal amount =
-        _parseAmount(_balanceController.text) ?? Decimal.zero;
+        parseTurkishAmount(_balanceController.text) ?? Decimal.zero;
     final int minorUnits = service.toMinor(amount, _currencyCode);
     final DateTime now = DateTime.now();
     final String name = _nameController.text.trim();
@@ -195,7 +181,8 @@ class _WalletFormPageState extends ConsumerState<WalletFormPage> {
                   labelText: l10n.walletInitialBalanceLabel,
                   border: const OutlineInputBorder(),
                 ),
-                validator: (String? value) => _parseAmount(value ?? '') == null
+                validator: (String? value) =>
+                    parseTurkishAmount(value ?? '') == null
                     ? l10n.validationInvalidAmount
                     : null,
               ),

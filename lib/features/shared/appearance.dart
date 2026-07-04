@@ -51,6 +51,35 @@ abstract final class Appearance {
     Icons.card_giftcard,
   ];
 
+  /// Selectable icons for categories — a curated set distinct from the
+  /// account/wallet icons, covering common income/expense themes.
+  static const List<IconData> categoryIcons = <IconData>[
+    Icons.shopping_cart,
+    Icons.restaurant,
+    Icons.home,
+    Icons.directions_bus,
+    Icons.receipt_long,
+    Icons.local_hospital,
+    Icons.movie,
+    Icons.checkroom,
+    Icons.school,
+    Icons.fitness_center,
+    Icons.pets,
+    Icons.flight,
+    Icons.local_gas_station,
+    Icons.phone_android,
+    Icons.wifi,
+    Icons.bolt,
+    Icons.water_drop,
+    Icons.child_care,
+    Icons.card_giftcard,
+    Icons.volunteer_activism,
+    Icons.trending_up,
+    Icons.work,
+    Icons.attach_money,
+    Icons.category,
+  ];
+
   /// Rebuilds a Material [IconData] from a stored [codePoint].
   ///
   /// Uses the runtime code point (not a const literal), so a release build must

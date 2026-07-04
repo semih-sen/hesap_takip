@@ -27,6 +27,11 @@ abstract interface class CategoryRepository {
 
   /// Hard-deletes the category (blocked by FK if referenced).
   Future<void> deleteCategory(int id);
+
+  /// Whether [id] participates in history (referenced by any transaction or
+  /// recurring-rule link). Used by the form to lock the income/expense type of
+  /// an already-used category.
+  Future<bool> isReferenced(int id);
 }
 
 class DriftCategoryRepository implements CategoryRepository {
@@ -65,6 +70,9 @@ class DriftCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> deleteCategory(int id) => _db.categoryDao.deleteCategory(id);
+
+  @override
+  Future<bool> isReferenced(int id) => _db.categoryDao.isReferenced(id);
 }
 
 /// App-lifetime singleton category repository.

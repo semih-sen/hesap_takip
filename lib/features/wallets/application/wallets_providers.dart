@@ -13,6 +13,11 @@ part 'wallets_providers.g.dart';
 Stream<List<Wallet>> walletsStream(Ref ref, int accountId) =>
     ref.watch(walletRepositoryProvider).watchWallets(accountId: accountId);
 
+/// All wallets across every account (for the transaction-form wallet picker).
+@riverpod
+Stream<List<Wallet>> allWallets(Ref ref) =>
+    ref.watch(walletRepositoryProvider).watchWallets();
+
 /// Wallets for [accountId] as the user should SEE them = DB stream with the
 /// pending-undo overlay applied.
 @riverpod

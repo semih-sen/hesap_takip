@@ -40,10 +40,11 @@ void main() {
     expect(find.text('Kategoriler'), findsOneWidget);
     expect(find.text('Ayarlar'), findsOneWidget);
 
-    // Dashboard is the initial destination (still a placeholder).
-    expect(find.text('Bu bölüm yakında eklenecek.'), findsOneWidget);
+    // Dashboard is the initial destination — the real transaction-list host
+    // (Phase 5), identified by its add-transaction FAB.
+    expect(find.text('İşlem ekle'), findsOneWidget);
 
-    // Navigation switches between placeholder screens (Settings is safe — no DB).
+    // Navigation switches between screens (Settings is safe — no DB).
     await tester.tap(find.text('Ayarlar'));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.settings_outlined), findsWidgets);

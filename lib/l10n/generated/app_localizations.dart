@@ -381,6 +381,222 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bu cüzdanda işlemler var, silinemez. Bunun yerine arşivleyin.'**
   String get walletDeleteBlocked;
+
+  /// Invalid exchange-rate validation message.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz kur.'**
+  String get validationInvalidRate;
+
+  /// Error shown when per-category split allocations do not reconcile with the transaction total.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori tutarları işlem tutarıyla eşleşmiyor.'**
+  String get validationSplitMismatch;
+
+  /// Category type: income tab/segment label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelir'**
+  String get categoryTypeIncome;
+
+  /// Category type: expense tab/segment label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gider'**
+  String get categoryTypeExpense;
+
+  /// Empty-state title on a categories tab.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz kategori yok'**
+  String get categoriesEmptyTitle;
+
+  /// Empty-state message on a categories tab.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlk kategorinizi ekleyerek başlayın.'**
+  String get categoriesEmptyMessage;
+
+  /// Add-category button / form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori ekle'**
+  String get categoryAdd;
+
+  /// Edit-category form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategoriyi düzenle'**
+  String get categoryEdit;
+
+  /// Category name field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori adı'**
+  String get categoryNameLabel;
+
+  /// Category type selector label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tür'**
+  String get categoryTypeLabel;
+
+  /// Hint explaining the type of a referenced category is locked.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanılan bir kategorinin türü değiştirilemez.'**
+  String get categoryTypeLockedHint;
+
+  /// Parent category dropdown label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Üst kategori'**
+  String get categoryParentLabel;
+
+  /// Dropdown option meaning no parent (top-level category).
+  ///
+  /// In tr, this message translates to:
+  /// **'Yok (üst kategori)'**
+  String get categoryParentNone;
+
+  /// Hint under the parent dropdown explaining child inherits parent type.
+  ///
+  /// In tr, this message translates to:
+  /// **'İsteğe bağlı. Alt kategori, üst kategorinin türünü alır.'**
+  String get categoryParentHint;
+
+  /// Hint explaining a category with children cannot be nested.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alt kategorileri olan bir kategori başka bir kategoriye taşınamaz.'**
+  String get categoryParentDisabledHint;
+
+  /// Tooltip for the toggle that reveals archived categories.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arşivlileri göster'**
+  String get categoryShowArchived;
+
+  /// Tooltip for the toggle that hides archived categories.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arşivlileri gizle'**
+  String get categoryHideArchived;
+
+  /// SnackBar text after queuing a category delete.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} silindi'**
+  String categoryDeleted(String name);
+
+  /// Message when a category cannot be deleted because it is referenced or has children.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kategori kullanılıyor veya alt kategorileri var, silinemez. Bunun yerine arşivleyin.'**
+  String get categoryDeleteBlocked;
+
+  /// Add-transaction button / form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'İşlem ekle'**
+  String get transactionAdd;
+
+  /// Edit-transaction form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'İşlemi düzenle'**
+  String get transactionEdit;
+
+  /// SnackBar text after queuing a transaction delete.
+  ///
+  /// In tr, this message translates to:
+  /// **'İşlem silindi'**
+  String get transactionDeleted;
+
+  /// Transaction type: income.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelir'**
+  String get transactionTypeIncome;
+
+  /// Transaction type: expense.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gider'**
+  String get transactionTypeExpense;
+
+  /// Transaction type: transfer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Transfer'**
+  String get transactionTypeTransfer;
+
+  /// Wallet picker label on the transaction form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdan'**
+  String get transactionWalletLabel;
+
+  /// Amount field label on the transaction form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tutar'**
+  String get transactionAmountLabel;
+
+  /// Exchange-rate field label showing the wallet and base currency codes.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kur ({from} → {base})'**
+  String transactionRateLabel(String from, String base);
+
+  /// Value-date field label on the transaction form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tarih'**
+  String get transactionDateLabel;
+
+  /// Categories multi-select label on the transaction form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategoriler'**
+  String get transactionCategoriesLabel;
+
+  /// Message shown when no categories exist for the selected type.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu tür için kategori yok. Önce bir kategori ekleyin.'**
+  String get transactionNoCategories;
+
+  /// Toggle enabling per-category split amounts.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategorilere böl'**
+  String get transactionSplitLabel;
+
+  /// Note field label on the transaction form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Not (isteğe bağlı)'**
+  String get transactionNoteLabel;
+
+  /// Payee field label on the transaction form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alıcı/Ödeyen (isteğe bağlı)'**
+  String get transactionPayeeLabel;
+
+  /// Empty-state title on the dashboard transaction list.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz işlem yok'**
+  String get transactionsEmptyTitle;
+
+  /// Empty-state message on the dashboard transaction list.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlk gelir veya giderinizi ekleyin.'**
+  String get transactionsEmptyMessage;
 }
 
 class _AppLocalizationsDelegate
