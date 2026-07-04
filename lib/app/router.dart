@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:hesap_takip/features/accounts/accounts_screen.dart';
+import 'package:hesap_takip/features/accounts/presentation/accounts_screen.dart';
 import 'package:hesap_takip/features/categories/categories_screen.dart';
 import 'package:hesap_takip/features/dashboard/dashboard_screen.dart';
 import 'package:hesap_takip/features/settings/settings_screen.dart';

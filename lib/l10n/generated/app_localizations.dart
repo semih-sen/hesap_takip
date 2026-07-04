@@ -148,11 +148,239 @@ abstract class AppLocalizations {
   /// **'Ayarlar'**
   String get settingsTitle;
 
-  /// Generic message shown on Phase 0 placeholder screens before the feature is built.
+  /// Generic message shown on placeholder screens before the feature is built.
   ///
   /// In tr, this message translates to:
   /// **'Bu bölüm yakında eklenecek.'**
   String get placeholderComingSoon;
+
+  /// Save button label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaydet'**
+  String get actionSave;
+
+  /// Cancel button label.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal'**
+  String get actionCancel;
+
+  /// Delete menu/button label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sil'**
+  String get actionDelete;
+
+  /// Edit menu/button label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Düzenle'**
+  String get actionEdit;
+
+  /// Archive menu label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arşivle'**
+  String get actionArchive;
+
+  /// Unarchive menu label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arşivden çıkar'**
+  String get actionUnarchive;
+
+  /// Undo action on the SnackBar.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri al'**
+  String get actionUndo;
+
+  /// Retry button on an error state.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekrar dene'**
+  String get actionRetry;
+
+  /// Add-wallet button label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdan ekle'**
+  String get actionAddWallet;
+
+  /// Generic error-state message.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir hata oluştu.'**
+  String get errorGeneric;
+
+  /// Required-field validation message.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu alan gerekli.'**
+  String get validationRequired;
+
+  /// Invalid monetary amount validation message.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz tutar.'**
+  String get validationInvalidAmount;
+
+  /// Badge shown on archived accounts/wallets.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arşivli'**
+  String get archivedBadge;
+
+  /// Color picker label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Renk'**
+  String get colorLabel;
+
+  /// Icon picker label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Simge'**
+  String get iconLabel;
+
+  /// Empty-state title on the accounts screen.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz hesap yok'**
+  String get accountsEmptyTitle;
+
+  /// Empty-state message on the accounts screen.
+  ///
+  /// In tr, this message translates to:
+  /// **'İlk hesabınızı ekleyerek başlayın.'**
+  String get accountsEmptyMessage;
+
+  /// Add-account button / form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap ekle'**
+  String get accountAdd;
+
+  /// Edit-account form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesabı düzenle'**
+  String get accountEdit;
+
+  /// Account name field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap adı'**
+  String get accountNameLabel;
+
+  /// Account type field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap türü'**
+  String get accountTypeLabel;
+
+  /// SnackBar text after queuing an account delete.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} silindi'**
+  String accountDeleted(String name);
+
+  /// Message when an account cannot be deleted due to existing wallets.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu hesabın cüzdanları var. Önce cüzdanları silin veya taşıyın.'**
+  String get accountDeleteBlocked;
+
+  /// Account type: bank.
+  ///
+  /// In tr, this message translates to:
+  /// **'Banka'**
+  String get accountTypeBank;
+
+  /// Account type: cash.
+  ///
+  /// In tr, this message translates to:
+  /// **'Nakit'**
+  String get accountTypeCash;
+
+  /// Account type: credit card.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kredi kartı'**
+  String get accountTypeCreditCard;
+
+  /// Account type: person.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kişi'**
+  String get accountTypePerson;
+
+  /// Account type: investment.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yatırım'**
+  String get accountTypeInvestment;
+
+  /// Account type: other.
+  ///
+  /// In tr, this message translates to:
+  /// **'Diğer'**
+  String get accountTypeOther;
+
+  /// Empty-state under an account with no wallets.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu hesapta cüzdan yok.'**
+  String get walletsEmpty;
+
+  /// Add-wallet form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdan ekle'**
+  String get walletAdd;
+
+  /// Edit-wallet form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdanı düzenle'**
+  String get walletEdit;
+
+  /// Wallet name field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdan adı'**
+  String get walletNameLabel;
+
+  /// Wallet currency field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Para birimi'**
+  String get walletCurrencyLabel;
+
+  /// Wallet initial balance field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç bakiyesi'**
+  String get walletInitialBalanceLabel;
+
+  /// Hint explaining wallet currency is immutable after creation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Para birimi, cüzdan oluşturulduktan sonra değiştirilemez.'**
+  String get walletCurrencyFixedHint;
+
+  /// SnackBar text after queuing a wallet delete.
+  ///
+  /// In tr, this message translates to:
+  /// **'{name} silindi'**
+  String walletDeleted(String name);
+
+  /// Message when a wallet cannot be deleted due to existing transactions.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu cüzdanda işlemler var, silinemez. Bunun yerine arşivleyin.'**
+  String get walletDeleteBlocked;
 }
 
 class _AppLocalizationsDelegate

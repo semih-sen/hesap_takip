@@ -21,6 +21,19 @@ class WalletDao extends DatabaseAccessor<AppDatabase> with _$WalletDaoMixin {
   Future<Wallet?> getWalletById(int id) =>
       (select(wallets)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Number of wallets under [accountId]. Used by the undo layer to pre-check
+  /// whether an account is FK-deletable (an account with wallets is restricted
+  /// and must be archived, or its wallets removed first).
+  Future<int> countForAccount(int accountId) async {
+    final Expression<int> total = countAll(
+      filter: wallets.accountId.equals(accountId),
+    );
+    final Selectable<int> query = (selectOnly(
+      wallets,
+    )..addColumns(<Expression<Object>>[total])).map((row) => row.read(total)!);
+    return query.getSingle();
+  }
+
   Stream<List<Wallet>> watchAllWallets() => _ordered().watch();
 
   Stream<List<Wallet>> watchWalletsForAccount(int accountId) =>
