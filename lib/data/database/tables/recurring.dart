@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../converters/date_only_converter.dart';
 import 'categories.dart';
 import 'enums.dart';
 import 'wallets.dart';
@@ -7,9 +8,10 @@ import 'wallets.dart';
 /// A rule that generates recurring transactions (PROJECT_PLAN §5.2).
 ///
 /// Date columns (`startDate`, `endDate`, `lastGeneratedDate`) are date-only
-/// concepts; they are stored as text via the database-wide
-/// `store_date_time_values_as_text` option and normalized to local midnight by
-/// the recurring service in a later phase.
+/// concepts, so they use [DateOnlyConverter] — the same `'yyyy-MM-dd'`
+/// representation as `Transactions.valueDate`. This unifies every date-only
+/// concept on one storage form and removes the UTC-shift foot-gun (Phase 2,
+/// Task 0). Audit columns (`createdAt`/`updatedAt`) stay full timestamps.
 class RecurringRules extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 80)();
@@ -25,11 +27,13 @@ class RecurringRules extends Table {
   IntColumn get byMonthDay => integer().nullable()(); // 1..31 (clamped)
   IntColumn get byWeekday => integer().nullable()(); // 1..7
 
-  DateTimeColumn get startDate => dateTime()(); // date-only
-  DateTimeColumn get endDate => dateTime().nullable()();
+  // Date-only, stored as ISO 'yyyy-MM-dd' text (§7, Phase 2 Task 0).
+  TextColumn get startDate => text().map(const DateOnlyConverter())();
+  TextColumn get endDate => text().map(const DateOnlyConverter()).nullable()();
   IntColumn get maxOccurrences => integer().nullable()();
   IntColumn get generatedCount => integer().withDefault(const Constant(0))();
-  DateTimeColumn get lastGeneratedDate => dateTime().nullable()();
+  TextColumn get lastGeneratedDate =>
+      text().map(const DateOnlyConverter()).nullable()();
 
   BoolColumn get autoPost =>
       boolean().withDefault(const Constant(false))(); // completed vs pending

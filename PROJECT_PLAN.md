@@ -470,6 +470,21 @@ for each rule in activeRules:
 
 **Idempotency:** the `UNIQUE(recurringRuleId, valueDate)` index guarantees re-running `generateDueEntries` cannot create duplicates. Handle the unique-constraint conflict by skipping.
 
+### 8.5 `UndoService` (Phase 2 & 12)
+
+**Concept:** To prevent complex cascading data loss (e.g., deleting a parent transaction with partial payments) and to align with Material 3 guidelines, "Undo" is handled via **Delayed Execution (Command Pattern)** in the application layer, rather than soft-deletes in the database.
+
+**Mechanism:**
+1. When a user deletes or mutates a critical record (Transaction, Category, Wallet), the UI calls `UndoService.queueAction(...)`.
+2. The service holds the action (a closure or a Command object) in a Riverpod state (`PendingActionQueue`).
+3. The UI optimistically updates or removes the item from the local Riverpod provider (so it disappears from the screen instantly).
+4. A Material 3 `SnackBar` is shown with an "Undo" (Geri Al) button and a 4-5 second timer.
+5. If the timer expires, `UndoService` executes the actual Drift transaction (`db.transaction { ... }`).
+6. If the user taps "Undo", the action is discarded from the queue, and the optimistic Riverpod state is reverted (the item reappears).
+
+**Safety Net:** 
+If the app is closed while an action is pending in the queue, `WidgetsBindingObserver` (or a Riverpod `onDispose` hook) must immediately commit all pending actions to Drift before the isolate dies.
+
 ---
 
 ## 9. State Management (Riverpod) — the two-scope rule
