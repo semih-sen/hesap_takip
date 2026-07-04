@@ -1,0 +1,8 @@
+# Localization configuration for flutter gen-l10n.
+# Runtime UI is Turkish only; source-of-truth ARB is app_tr.arb.
+arb-dir: lib/l10n
+template-arb-file: app_tr.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+output-dir: lib/l10n/generated
+nullable-getter: false

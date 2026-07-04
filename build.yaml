@@ -1,0 +1,19 @@
+# build_runner configuration.
+#
+# The code generators are active via dev_dependencies:
+#   - drift_dev            (Drift database / DAO codegen)
+#   - riverpod_generator   (Riverpod v3 provider codegen)
+#   - freezed              (immutable model codegen)
+#   - json_serializable    (JSON mappers)
+#
+# Phase 0 keeps generator options at their defaults so the build succeeds on an
+# empty codegen surface. Schema-affecting Drift options (e.g. datetime storage
+# format) are intentionally deferred to Phase 1 where the schema is defined.
+targets:
+  $default:
+    builders:
+      # Keep generated aggregate files free of analyzer noise.
+      source_gen:combining_builder:
+        options:
+          ignore_for_file:
+            - type=lint

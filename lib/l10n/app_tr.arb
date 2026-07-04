@@ -1,0 +1,47 @@
+{
+  "@@locale": "tr",
+
+  "appTitle": "Hesap Takip",
+  "@appTitle": {
+    "description": "Application display name shown in the app bar and task switcher."
+  },
+
+  "navDashboard": "Panel",
+  "@navDashboard": {
+    "description": "Bottom navigation label for the dashboard/summary tab."
+  },
+  "navAccounts": "Hesaplar",
+  "@navAccounts": {
+    "description": "Bottom navigation label for the accounts tab."
+  },
+  "navCategories": "Kategoriler",
+  "@navCategories": {
+    "description": "Bottom navigation label for the categories tab."
+  },
+  "navSettings": "Ayarlar",
+  "@navSettings": {
+    "description": "Bottom navigation label for the settings tab."
+  },
+
+  "dashboardTitle": "Panel",
+  "@dashboardTitle": {
+    "description": "App bar title for the dashboard screen."
+  },
+  "accountsTitle": "Hesaplar",
+  "@accountsTitle": {
+    "description": "App bar title for the accounts screen."
+  },
+  "categoriesTitle": "Kategoriler",
+  "@categoriesTitle": {
+    "description": "App bar title for the categories screen."
+  },
+  "settingsTitle": "Ayarlar",
+  "@settingsTitle": {
+    "description": "App bar title for the settings screen."
+  },
+
+  "placeholderComingSoon": "Bu bölüm yakında eklenecek.",
+  "@placeholderComingSoon": {
+    "description": "Generic message shown on Phase 0 placeholder screens before the feature is built."
+  }
+}
