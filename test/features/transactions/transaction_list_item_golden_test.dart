@@ -23,9 +23,8 @@ void main() {
     TransactionStatus status = TransactionStatus.completed,
     String? note,
     List<CategoryChipData> categories = const <CategoryChipData>[],
-    int? plannedAmountMinor,
-    int? settledAmountMinor,
-    bool isPendingParent = false,
+    bool isPending = false,
+    bool isOverdue = false,
     String? counterWalletName,
     bool isRecurring = false,
   }) {
@@ -44,9 +43,8 @@ void main() {
           : categories.first.colorValue,
       note: note,
       categories: categories,
-      plannedAmountMinor: plannedAmountMinor,
-      settledAmountMinor: settledAmountMinor,
-      isPendingParent: isPendingParent,
+      isPending: isPending,
+      isOverdue: isOverdue,
       counterWalletName: counterWalletName,
       isRecurring: isRecurring,
     );
@@ -122,9 +120,7 @@ void main() {
     );
   });
 
-  testWidgets('partial-payment progress (fixture)', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('pending overdue borç (fixture)', (WidgetTester tester) async {
     await pumpRow(
       tester,
       row(
@@ -133,14 +129,13 @@ void main() {
         flow: FlowDirection.outflow,
         amountMinor: 1000000,
         status: TransactionStatus.pending,
-        plannedAmountMinor: 1000000,
-        settledAmountMinor: 400000,
-        isPendingParent: true,
+        isPending: true,
+        isOverdue: true,
       ),
     );
     await expectLater(
       find.byType(TransactionListItem),
-      matchesGoldenFile('goldens/list_item_partial_payment.png'),
+      matchesGoldenFile('goldens/list_item_pending.png'),
     );
   });
 
@@ -158,6 +153,42 @@ void main() {
       find.byType(TransactionListItem),
       matchesGoldenFile('goldens/list_item_recurring.png'),
     );
+  });
+
+  testWidgets('pending expense shows the Borç chip; overdue adds Gecikmiş', (
+    WidgetTester tester,
+  ) async {
+    await pumpRow(
+      tester,
+      row(
+        title: 'Kira',
+        type: TransactionType.expense,
+        flow: FlowDirection.outflow,
+        status: TransactionStatus.pending,
+        isPending: true,
+        isOverdue: true,
+      ),
+    );
+    expect(find.text('Borç'), findsOneWidget);
+    expect(find.text('Gecikmiş'), findsOneWidget);
+    expect(find.text('Alacak'), findsNothing);
+  });
+
+  testWidgets('pending income shows the Alacak chip; not-overdue hides Gecikmiş', (
+    WidgetTester tester,
+  ) async {
+    await pumpRow(
+      tester,
+      row(
+        title: 'Maaş',
+        type: TransactionType.income,
+        flow: FlowDirection.inflow,
+        status: TransactionStatus.pending,
+        isPending: true,
+      ),
+    );
+    expect(find.text('Alacak'), findsOneWidget);
+    expect(find.text('Gecikmiş'), findsNothing);
   });
 
   testWidgets('transfer counter-wallet (fixture)', (WidgetTester tester) async {

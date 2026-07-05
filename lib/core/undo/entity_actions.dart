@@ -1,7 +1,4 @@
-import 'package:drift/drift.dart' show Value;
-
 import '../../data/database/app_database.dart' show AppDatabase;
-import '../../data/database/tables/enums.dart';
 import '../../data/models/account.dart';
 import '../../data/models/category.dart';
 import '../../data/models/mappers/account_mapper.dart';
@@ -269,78 +266,4 @@ class DeleteTransferAction extends UndoableAction {
   @override
   Future<void> commit(AppDatabase db) =>
       db.transactionDao.deleteTransferGroup(transferGroupId);
-}
-
-/// Deletes a bill-parent AND all its child payments after the undo window
-/// (Phase 9 §B.7). One atomic command: the children are removed before the
-/// parent (FK-safe and predictable), so a cascade bill delete never leaves an
-/// orphaned child. `UndoService` already wraps [commit] in `db.transaction`.
-class DeleteBillAction extends UndoableAction {
-  const DeleteBillAction({required this.parentId, required this.label});
-
-  final int parentId;
-
-  @override
-  final String label;
-
-  @override
-  EntityRef get target => EntityRef(UndoEntityType.transaction, parentId);
-
-  @override
-  UndoEffect get effect => const DeleteEffect();
-
-  @override
-  Future<bool> canCommit(AppDatabase db) async => true;
-
-  @override
-  Future<void> commit(AppDatabase db) async {
-    await db.transactionDao.deleteChildrenOf(parentId);
-    await db.transactionDao.deleteTransaction(parentId);
-  }
-}
-
-/// Reverses a child payment after the undo window (Phase 9 §B.7): restores the
-/// [contribMinor] (parent-currency) contribution to the parent, reopens it to
-/// `pending` even if it was `completed` (Flag B-4), and deletes the child. The
-/// overlay hides the child row during the window; [commit] performs the real,
-/// atomic reversal.
-class ReversePaymentAction extends UndoableAction {
-  const ReversePaymentAction({
-    required this.childId,
-    required this.parentId,
-    required this.contribMinor,
-    required this.label,
-  });
-
-  final int childId;
-  final int parentId;
-  final int contribMinor;
-
-  @override
-  final String label;
-
-  @override
-  EntityRef get target => EntityRef(UndoEntityType.transaction, childId);
-
-  @override
-  UndoEffect get effect => const DeleteEffect();
-
-  @override
-  Future<bool> canCommit(AppDatabase db) async => true;
-
-  @override
-  Future<void> commit(AppDatabase db) async {
-    final parent = await db.transactionDao.getTransactionById(parentId);
-    if (parent != null) {
-      final int newSettled = (parent.settledAmountMinor ?? 0) - contribMinor;
-      await db.transactionDao.updateTransaction(
-        parent.copyWith(
-          settledAmountMinor: Value(newSettled < 0 ? 0 : newSettled),
-          status: TransactionStatus.pending,
-          updatedAt: DateTime.now(),
-        ),
-      );
-    }
-    await db.transactionDao.deleteTransaction(childId);
-  }
 }

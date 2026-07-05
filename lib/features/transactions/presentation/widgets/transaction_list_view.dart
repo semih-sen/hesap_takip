@@ -15,6 +15,7 @@ import '../../application/transactions_providers.dart';
 import '../transaction_date_group.dart';
 import '../transaction_form_page.dart';
 import '../transfer_form_page.dart';
+import 'settle_sheet.dart';
 import 'transaction_list_item.dart';
 
 /// The transaction list body: date-grouped **sticky** sections built with
@@ -206,12 +207,41 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
                           const SizedBox(height: AppSpacing.sm),
                       itemBuilder: (BuildContext context, int index) {
                         final TransactionListRow row = group.rows[index];
-                        return InkWell(
-                          key: ValueKey<int>(row.id),
+                        final Widget tile = InkWell(
                           borderRadius: AppRadius.mdAll,
                           onTap: () => _edit(row),
                           onLongPress: () => _delete(row),
                           child: TransactionListItem(row: row),
+                        );
+                        // Only pending income/expense are swipe-settleable
+                        // ("Öde"/"Tahsil et"); everything else renders plainly.
+                        final bool settleable =
+                            row.isPending &&
+                            (row.type == TransactionType.income ||
+                                row.type == TransactionType.expense);
+                        if (!settleable) {
+                          return KeyedSubtree(
+                            key: ValueKey<int>(row.id),
+                            child: tile,
+                          );
+                        }
+                        return Dismissible(
+                          key: ValueKey<String>('settle_${row.id}'),
+                          background: _SettleSwipeBackground(
+                            row: row,
+                            alignEnd: false,
+                          ),
+                          secondaryBackground: _SettleSwipeBackground(
+                            row: row,
+                            alignEnd: true,
+                          ),
+                          confirmDismiss: (DismissDirection _) async {
+                            await showSettleSheet(context, ref, row);
+                            // Never actually dismiss — the list updates
+                            // reactively from the DB after settling.
+                            return false;
+                          },
+                          child: tile,
                         );
                       },
                     ),
@@ -276,6 +306,51 @@ class _DateHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant _DateHeaderDelegate oldDelegate) =>
       oldDelegate.label != label;
+}
+
+/// The revealed swipe action behind a pending row: "Öde" (expense) / "Tahsil et"
+/// (income) with the matching semantic accent, on either swipe direction.
+class _SettleSwipeBackground extends StatelessWidget {
+  const _SettleSwipeBackground({required this.row, required this.alignEnd});
+
+  final TransactionListRow row;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final AppSemanticColors semantic =
+        theme.extension<AppSemanticColors>() ?? AppSemanticColors.dark;
+    final bool isIncome = row.type == TransactionType.income;
+    final Color accent = isIncome ? semantic.income : semantic.expense;
+    final String label = isIncome
+        ? l10n.settleCollectTitle
+        : l10n.settlePayTitle;
+    return Container(
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.20),
+        borderRadius: AppRadius.mdAll,
+      ),
+      alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(isIncome ? Icons.savings_outlined : Icons.payments_outlined,
+              color: accent, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _EmptyState extends StatelessWidget {

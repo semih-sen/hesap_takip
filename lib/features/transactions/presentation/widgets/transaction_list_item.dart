@@ -161,35 +161,12 @@ class TransactionListItem extends StatelessWidget {
     AppSemanticColors semantic,
     AppLocalizations l10n,
   ) {
-    // 1) Pending parent with partial payments → progress bar (Phase 9).
-    final int? planned = row.plannedAmountMinor;
-    if (row.isPendingParent && planned != null && planned > 0) {
-      final int settled = row.settledAmountMinor ?? 0;
-      final double value = (settled / planned).clamp(0.0, 1.0);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          ClipRRect(
-            borderRadius: AppRadius.smAll,
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 4,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(semantic.income),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            l10n.transactionPartiallyPaid(
-              _currency.format(settled, row.currencyCode),
-              _currency.format(planned, row.currencyCode),
-            ),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: semantic.textMuted,
-            ),
-          ),
-        ],
-      );
+    // 1) Pending (future-dated / overdue) income or expense → borç/alacak chip
+    //    with the due date, plus a "Gecikmiş" emphasis when overdue (§5.1).
+    if (row.isPending &&
+        (row.type == TransactionType.income ||
+            row.type == TransactionType.expense)) {
+      return _PendingMeta(row: row, theme: theme, semantic: semantic, l10n: l10n);
     }
 
     // 2) Transfer → counter-wallet (Phase 8): renders only when present.
@@ -307,6 +284,71 @@ class _CategoryChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Row-3 for a pending (borç/alacak) item: a colored pill + due date, with a
+/// "Gecikmiş" emphasis when overdue. Pure presentational — reads only row flags.
+class _PendingMeta extends StatelessWidget {
+  const _PendingMeta({
+    required this.row,
+    required this.theme,
+    required this.semantic,
+    required this.l10n,
+  });
+
+  final TransactionListRow row;
+  final ThemeData theme;
+  final AppSemanticColors semantic;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isIncome = row.type == TransactionType.income;
+    final Color accent = isIncome ? semantic.income : semantic.expense;
+    final String label = isIncome
+        ? l10n.pendingChipReceivable
+        : l10n.pendingChipDebt;
+    final String due = l10n.pendingDue(
+      DateFormat('d MMM yyyy', 'tr_TR').format(row.valueDate),
+    );
+    return Row(
+      children: <Widget>[
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.14),
+            borderRadius: AppRadius.pillAll,
+          ),
+          child: Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Text(
+            due,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(color: semantic.textMuted),
+          ),
+        ),
+        if (row.isOverdue) ...<Widget>[
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            l10n.pendingOverdue,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: semantic.expense,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

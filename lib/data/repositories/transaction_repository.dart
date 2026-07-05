@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/currency/currency_service.dart';
 import '../../core/currency/split_allocation.dart';
+import '../../core/date/app_date.dart';
 import '../../core/date/date_range.dart';
 import '../../features/transactions/services/summary_data.dart';
 import '../database/app_database.dart' as db;
@@ -61,6 +62,10 @@ abstract interface class TransactionRepository {
 
   /// The transaction with [id], or `null`.
   Future<Transaction?> findTransaction(int id);
+
+  /// True when [id] is a pending parent that already has settlement children —
+  /// the edit form keeps it pending regardless of an edited date (Flag E-3).
+  Future<bool> hasSettlementChildren(int id);
 
   /// Both legs of the transfer [transferGroupId] (0 or 2 rows), as domain models.
   Future<List<Transaction>> transferLegs(String transferGroupId);
@@ -166,88 +171,29 @@ class DriftTransactionRepository implements TransactionRepository {
       for (final db.Wallet w in effective) w.id,
     };
 
-    // The aggregate SQL covers only non-parent rows (children/normal/transfers).
-    // Each emission re-reads the pending bill-parents and folds their remaining
-    // (converted to base in Dart) into Alacak/Borç/Devreden — kept reactive
-    // because the aggregate re-emits on any `transactions` change (Flag B-5).
     yield* _db.transactionDao
         .watchSummaryBuckets(
           walletIds: effectiveIds,
           period: period,
           today: today,
         )
-        .asyncMap((SummaryBuckets b) async {
-          final List<db.Transaction> parents = await _db.transactionDao
-              .getPendingBillParents(effectiveIds);
-          final _ParentDeltas d = _foldPendingParents(parents, base, period);
-          return _assemble(b, initialBaseMinor, base, d);
-        });
+        .map((SummaryBuckets b) => _assemble(b, initialBaseMinor, base));
   }
 
-  /// Folds each pending bill-parent's REMAINING (planned − settled, in the
-  /// parent's currency) into base-currency deltas for Alacak (receivable), Borç
-  /// (payable) and Devreden (carried) per B.5. Completed parents and settled
-  /// parents contribute nothing; children already carry the settled money.
-  static _ParentDeltas _foldPendingParents(
-    List<db.Transaction> parents,
-    String base,
-    DateRange period,
-  ) {
-    int receivable = 0;
-    int payable = 0;
-    int carried = 0;
-    for (final db.Transaction p in parents) {
-      final int remainingRow =
-          (p.plannedAmountMinor ?? 0) - (p.settledAmountMinor ?? 0);
-      if (remainingRow <= 0) {
-        continue;
-      }
-      final int remainingBase = p.currencyCode == base
-          ? remainingRow
-          : _currency.convertMinor(
-              amountMinor: remainingRow,
-              fromCode: p.currencyCode,
-              toCode: base,
-              rate: p.exchangeRateToBase,
-            );
-      final bool isIncome = p.type == TransactionType.income;
-      final bool inPeriod =
-          !p.valueDate.isBefore(period.start) &&
-          !p.valueDate.isAfter(period.end);
-      if (inPeriod) {
-        if (isIncome) {
-          receivable += remainingBase;
-        } else {
-          payable += remainingBase;
-        }
-      }
-      if (p.valueDate.isBefore(period.start)) {
-        carried += isIncome ? remainingBase : -remainingBase;
-      }
-    }
-    return _ParentDeltas(
-      receivable: receivable,
-      payable: payable,
-      carriedNonTransfer: carried,
-    );
-  }
-
-  /// Assembles the DAO buckets + converted initial balance + pending-parent
-  /// deltas into the 9-cell [SummaryData] (Summary Card Refactor §A.4 / B.5).
+  /// Assembles the DAO buckets + converted initial balance into the 9-cell
+  /// [SummaryData]. Money math is status-based only (§7): pending items' own
+  /// `amount`/`baseAmount` already hold the outstanding remainder, so the
+  /// buckets sum directly with no planned/settled reconciliation.
   static SummaryData _assemble(
     SummaryBuckets b,
     int initialBaseMinor,
     String base,
-    _ParentDeltas d,
   ) {
-    final int receivable = b.receivableIncomeMinor + d.receivable;
-    final int payable = b.payableExpenseMinor + d.payable;
-    final int incomeTotal = b.collectedIncomeMinor + receivable;
-    final int expenseTotal = b.paidExpenseMinor + payable;
+    final int incomeTotal = b.collectedIncomeMinor + b.receivableIncomeMinor;
+    final int expenseTotal = b.paidExpenseMinor + b.payableExpenseMinor;
     final int netBalance = incomeTotal - expenseTotal;
     final int carriedOver = initialBaseMinor +
         b.carriedNonTransferSignedMinor +
-        d.carriedNonTransfer +
         b.carriedTransferSignedMinor;
     // Devredecek = Devreden + period net + in-period completed transfer legs, so
     // Devredecek(N) == Devreden(N+1) for contiguous periods (transfers are not
@@ -265,15 +211,19 @@ class DriftTransactionRepository implements TransactionRepository {
       expenseTotalMinor: expenseTotal,
       netBalanceMinor: netBalance,
       collectedIncomeMinor: b.collectedIncomeMinor,
-      receivableIncomeMinor: receivable,
+      receivableIncomeMinor: b.receivableIncomeMinor,
       paidExpenseMinor: b.paidExpenseMinor,
-      payableExpenseMinor: payable,
+      payableExpenseMinor: b.payableExpenseMinor,
     );
   }
 
   @override
   Future<Transaction?> findTransaction(int id) async =>
       (await _db.transactionDao.getTransactionById(id))?.toDomain();
+
+  @override
+  Future<bool> hasSettlementChildren(int id) async =>
+      (await _db.transactionDao.countChildren(id)) > 0;
 
   @override
   Future<List<Transaction>> transferLegs(String transferGroupId) async {
@@ -385,25 +335,14 @@ class DriftTransactionRepository implements TransactionRepository {
   }
 }
 
-/// Base-currency deltas contributed by the pending bill-parents in scope,
-/// folded into the summary buckets in Dart (B.5).
-class _ParentDeltas {
-  const _ParentDeltas({
-    required this.receivable,
-    required this.payable,
-    required this.carriedNonTransfer,
-  });
-
-  /// Added to Alacak (pending income remaining, in period).
-  final int receivable;
-
-  /// Added to Borç (pending expense remaining, in period).
-  final int payable;
-
-  /// Signed remaining of pending parents dated before the period, added to
-  /// Devreden (income +, expense −).
-  final int carriedNonTransfer;
-}
+/// Derives a normal income/expense transaction's [db.TransactionStatus] from its
+/// [valueDate] (Phase 9 rework §2 / Flag E-1): a future date is a not-yet-due
+/// **pending** item (borç/alacak); today or past is **completed**. Transfers and
+/// recurring keep their own rules and must not route through here.
+TransactionStatus statusForValueDate(DateTime valueDate) =>
+    valueDate.isAfter(AppDate.today())
+        ? TransactionStatus.pending
+        : TransactionStatus.completed;
 
 /// App-lifetime singleton transaction repository.
 @Riverpod(keepAlive: true)

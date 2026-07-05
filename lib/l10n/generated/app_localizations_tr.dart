@@ -290,11 +290,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get transactionStatusCancelled => 'İptal edildi';
 
   @override
-  String transactionPartiallyPaid(String settled, String planned) {
-    return 'Kısmen ödendi: $settled/$planned';
-  }
-
-  @override
   String transactionTransferTo(String wallet) {
     return 'Transfer → $wallet';
   }
@@ -448,87 +443,44 @@ class AppLocalizationsTr extends AppLocalizations {
       'Transfer için en az iki cüzdan gerekir.';
 
   @override
-  String get billsTitle => 'Borçlar & Alacaklar';
+  String get pendingChipDebt => 'Borç';
 
   @override
-  String get billsSectionDebts => 'Borçlar';
+  String get pendingChipReceivable => 'Alacak';
 
   @override
-  String get billsSectionReceivables => 'Alacaklar';
-
-  @override
-  String get billsEmpty => 'Bekleyen borç veya alacak yok.';
-
-  @override
-  String get billAdd => 'Fatura/Alacak ekle';
-
-  @override
-  String get billModeLabel => 'Bekleyen fatura/alacak';
-
-  @override
-  String get billModeHint =>
-      'Şimdi para hareketi olmaz; sonra kısmi ödemeler eklenir.';
-
-  @override
-  String get billPlannedLabel => 'Planlanan tutar';
-
-  @override
-  String billRemaining(String amount) {
-    return 'Kalan $amount';
+  String pendingDue(String date) {
+    return 'Vade: $date';
   }
 
   @override
-  String billProgress(String settled, String planned) {
-    return '$settled / $planned';
+  String get pendingOverdue => 'Gecikmiş';
+
+  @override
+  String get settlePayTitle => 'Öde';
+
+  @override
+  String get settleCollectTitle => 'Tahsil et';
+
+  @override
+  String get settleAmountLabel => 'Tutar';
+
+  @override
+  String settleRemaining(String amount) {
+    return 'Kalan: $amount';
   }
 
   @override
-  String get billDetailTitle => 'Fatura ayrıntısı';
+  String get settleDateLabel => 'Ödeme tarihi';
 
   @override
-  String get billDeleted => 'Fatura silindi';
-
-  @override
-  String get billDeleteTitle => 'Faturayı sil';
-
-  @override
-  String get billDeleteMessage =>
-      'Bu fatura ve tüm ödemeleri silinecek. Devam edilsin mi?';
-
-  @override
-  String get paymentAdd => 'Ödeme ekle';
-
-  @override
-  String get paymentHistoryTitle => 'Ödeme geçmişi';
-
-  @override
-  String get paymentHistoryEmpty => 'Henüz ödeme yok.';
-
-  @override
-  String get paymentSourceWalletLabel => 'Kaynak cüzdan';
-
-  @override
-  String get paymentAmountLabel => 'Ödeme tutarı';
-
-  @override
-  String paymentRateToParentLabel(String from, String to) {
-    return 'Kur ($from → $to)';
+  String validationOverpayment(String remaining) {
+    return 'Tutar kalanı ($remaining) aşamaz.';
   }
 
   @override
-  String get paymentReversed => 'Ödeme geri alındı';
+  String get settledExpense => 'Ödendi';
 
   @override
-  String get overpaymentTitle => 'Kalan tutarı aşıyor';
-
-  @override
-  String overpaymentMessage(String attempted, String remaining) {
-    return 'Ödeme $attempted, kalan $remaining. Ne yapmak istersiniz?';
-  }
-
-  @override
-  String get overpaymentCap => 'Kalanla sınırla';
-
-  @override
-  String get overpaymentAllow => 'Fazla ödemeye izin ver';
+  String get settledIncome => 'Tahsil edildi';
 }

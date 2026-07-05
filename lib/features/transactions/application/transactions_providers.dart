@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/date/app_date.dart';
 import '../../../core/date/date_range.dart';
 import '../../../core/undo/optimistic_overlay.dart';
 import '../../../core/undo/pending_action_queue.dart';
@@ -49,9 +50,8 @@ class TransactionListRow {
     this.note,
     this.payee,
     this.categories = const <CategoryChipData>[],
-    this.plannedAmountMinor,
-    this.settledAmountMinor,
-    this.isPendingParent = false,
+    this.isPending = false,
+    this.isOverdue = false,
     this.counterWalletName,
     this.isRecurring = false,
   });
@@ -76,10 +76,14 @@ class TransactionListRow {
   /// Categories for Row 3 chips, primary-first.
   final List<CategoryChipData> categories;
 
-  // ---- Contextual Row-3 seams (populated by Phases 8–10) ----
-  final int? plannedAmountMinor;
-  final int? settledAmountMinor;
-  final bool isPendingParent;
+  // ---- Contextual Row-3 seams ----
+
+  /// A future-dated (or overdue) unpaid income/expense = alacak/borç. Its
+  /// `amountMinor` is the outstanding remainder; swipe settles it.
+  final bool isPending;
+
+  /// A [isPending] item whose due date is already in the past.
+  final bool isOverdue;
   final String? counterWalletName;
   final bool isRecurring;
 }
@@ -95,6 +99,11 @@ TransactionListRow _toRow(TransactionListRowData d) {
   final TransactionRowCategory? primary = d.categories.isEmpty
       ? null
       : d.categories.first;
+  // Pending/overdue are DERIVED here (where "today" is known) and passed as
+  // flags so the pure list item never reads a clock or a provider (§5.1).
+  final bool isPending = d.status == TransactionStatus.pending;
+  final bool isOverdue =
+      isPending && d.valueDate.isBefore(AppDate.today());
   return TransactionListRow(
     id: d.id,
     title: primary?.name ?? d.payee,
@@ -112,9 +121,8 @@ TransactionListRow _toRow(TransactionListRowData d) {
       for (final TransactionRowCategory c in d.categories)
         CategoryChipData(id: c.id, name: c.name, colorValue: c.colorValue),
     ],
-    plannedAmountMinor: d.plannedAmountMinor,
-    settledAmountMinor: d.settledAmountMinor,
-    isPendingParent: d.isPendingParent,
+    isPending: isPending,
+    isOverdue: isOverdue,
     counterWalletName: d.counterWalletName,
     isRecurring: d.isRecurring,
   );

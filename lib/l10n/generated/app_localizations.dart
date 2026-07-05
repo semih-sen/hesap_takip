@@ -622,12 +622,6 @@ abstract class AppLocalizations {
   /// **'İptal edildi'**
   String get transactionStatusCancelled;
 
-  /// Row 3 label under a pending parent bill showing settled over planned amounts.
-  ///
-  /// In tr, this message translates to:
-  /// **'Kısmen ödendi: {settled}/{planned}'**
-  String transactionPartiallyPaid(String settled, String planned);
-
   /// Row 3 label on a transfer row naming the counter wallet.
   ///
   /// In tr, this message translates to:
@@ -922,155 +916,77 @@ abstract class AppLocalizations {
   /// **'Transfer için en az iki cüzdan gerekir.'**
   String get transferNeedsTwoWallets;
 
-  /// App bar title / dashboard action for the pending bills & receivables screen.
+  /// Row-3 chip on a pending (future-dated, unpaid) expense — money owed.
   ///
   /// In tr, this message translates to:
-  /// **'Borçlar & Alacaklar'**
-  String get billsTitle;
+  /// **'Borç'**
+  String get pendingChipDebt;
 
-  /// Section header listing pending expense bills.
+  /// Row-3 chip on a pending (future-dated, unpaid) income — money to collect.
   ///
   /// In tr, this message translates to:
-  /// **'Borçlar'**
-  String get billsSectionDebts;
+  /// **'Alacak'**
+  String get pendingChipReceivable;
 
-  /// Section header listing pending income receivables.
+  /// Due-date label on a pending row.
   ///
   /// In tr, this message translates to:
-  /// **'Alacaklar'**
-  String get billsSectionReceivables;
+  /// **'Vade: {date}'**
+  String pendingDue(String date);
 
-  /// Empty-state on the pending bills & receivables screen.
+  /// Emphasis label on a pending item whose due date is in the past.
   ///
   /// In tr, this message translates to:
-  /// **'Bekleyen borç veya alacak yok.'**
-  String get billsEmpty;
+  /// **'Gecikmiş'**
+  String get pendingOverdue;
 
-  /// Add-bill button / form title for a pending bill or receivable.
+  /// Swipe action / settle-sheet title for paying a pending expense.
   ///
   /// In tr, this message translates to:
-  /// **'Fatura/Alacak ekle'**
-  String get billAdd;
+  /// **'Öde'**
+  String get settlePayTitle;
 
-  /// Toggle on the transaction form switching it to pending-bill creation mode.
+  /// Swipe action / settle-sheet title for collecting a pending income.
   ///
   /// In tr, this message translates to:
-  /// **'Bekleyen fatura/alacak'**
-  String get billModeLabel;
+  /// **'Tahsil et'**
+  String get settleCollectTitle;
 
-  /// Hint explaining a bill records no money movement until payments are applied.
+  /// Amount field label on the settle sheet (prefilled with the remaining).
   ///
   /// In tr, this message translates to:
-  /// **'Şimdi para hareketi olmaz; sonra kısmi ödemeler eklenir.'**
-  String get billModeHint;
+  /// **'Tutar'**
+  String get settleAmountLabel;
 
-  /// Planned amount field label on the bill form.
+  /// Remaining-amount hint on the settle sheet.
   ///
   /// In tr, this message translates to:
-  /// **'Planlanan tutar'**
-  String get billPlannedLabel;
+  /// **'Kalan: {amount}'**
+  String settleRemaining(String amount);
 
-  /// Remaining amount on a bill row/detail.
+  /// Payment-date field label on the settle sheet (defaults to today).
   ///
   /// In tr, this message translates to:
-  /// **'Kalan {amount}'**
-  String billRemaining(String amount);
+  /// **'Ödeme tarihi'**
+  String get settleDateLabel;
 
-  /// Settled over planned amounts shown next to a bill's progress bar.
+  /// Validation error when the settle amount exceeds the remaining balance.
   ///
   /// In tr, this message translates to:
-  /// **'{settled} / {planned}'**
-  String billProgress(String settled, String planned);
+  /// **'Tutar kalanı ({remaining}) aşamaz.'**
+  String validationOverpayment(String remaining);
 
-  /// App bar title for a single bill's detail/payment-history screen.
+  /// SnackBar text after settling (paying) a pending expense.
   ///
   /// In tr, this message translates to:
-  /// **'Fatura ayrıntısı'**
-  String get billDetailTitle;
+  /// **'Ödendi'**
+  String get settledExpense;
 
-  /// SnackBar text after queuing a bill (and its payments) delete.
+  /// SnackBar text after settling (collecting) a pending income.
   ///
   /// In tr, this message translates to:
-  /// **'Fatura silindi'**
-  String get billDeleted;
-
-  /// Confirmation dialog title for deleting a bill with payments.
-  ///
-  /// In tr, this message translates to:
-  /// **'Faturayı sil'**
-  String get billDeleteTitle;
-
-  /// Confirmation dialog body for cascade-deleting a bill and its payments.
-  ///
-  /// In tr, this message translates to:
-  /// **'Bu fatura ve tüm ödemeleri silinecek. Devam edilsin mi?'**
-  String get billDeleteMessage;
-
-  /// Add-payment button / form title for applying a payment to a bill.
-  ///
-  /// In tr, this message translates to:
-  /// **'Ödeme ekle'**
-  String get paymentAdd;
-
-  /// Section header for a bill's list of child payments.
-  ///
-  /// In tr, this message translates to:
-  /// **'Ödeme geçmişi'**
-  String get paymentHistoryTitle;
-
-  /// Empty-state under a bill with no payments yet.
-  ///
-  /// In tr, this message translates to:
-  /// **'Henüz ödeme yok.'**
-  String get paymentHistoryEmpty;
-
-  /// Source-wallet picker label on the payment form.
-  ///
-  /// In tr, this message translates to:
-  /// **'Kaynak cüzdan'**
-  String get paymentSourceWalletLabel;
-
-  /// Payment amount field label on the payment form.
-  ///
-  /// In tr, this message translates to:
-  /// **'Ödeme tutarı'**
-  String get paymentAmountLabel;
-
-  /// Rate field label converting the source wallet currency to the bill's currency.
-  ///
-  /// In tr, this message translates to:
-  /// **'Kur ({from} → {to})'**
-  String paymentRateToParentLabel(String from, String to);
-
-  /// SnackBar text after queuing a payment reversal.
-  ///
-  /// In tr, this message translates to:
-  /// **'Ödeme geri alındı'**
-  String get paymentReversed;
-
-  /// Dialog title shown when a payment exceeds the bill's remaining balance.
-  ///
-  /// In tr, this message translates to:
-  /// **'Kalan tutarı aşıyor'**
-  String get overpaymentTitle;
-
-  /// Dialog body comparing the attempted payment to the remaining balance.
-  ///
-  /// In tr, this message translates to:
-  /// **'Ödeme {attempted}, kalan {remaining}. Ne yapmak istersiniz?'**
-  String overpaymentMessage(String attempted, String remaining);
-
-  /// Dialog action capping the payment to the remaining balance.
-  ///
-  /// In tr, this message translates to:
-  /// **'Kalanla sınırla'**
-  String get overpaymentCap;
-
-  /// Dialog action allowing the payment to exceed the remaining balance.
-  ///
-  /// In tr, this message translates to:
-  /// **'Fazla ödemeye izin ver'**
-  String get overpaymentAllow;
+  /// **'Tahsil edildi'**
+  String get settledIncome;
 }
 
 class _AppLocalizationsDelegate

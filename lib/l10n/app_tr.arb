@@ -224,11 +224,6 @@
   "transactionStatusCancelled": "İptal edildi",
   "@transactionStatusCancelled": { "description": "Transaction status: cancelled." },
 
-  "transactionPartiallyPaid": "Kısmen ödendi: {settled}/{planned}",
-  "@transactionPartiallyPaid": {
-    "description": "Row 3 label under a pending parent bill showing settled over planned amounts.",
-    "placeholders": { "settled": { "type": "String" }, "planned": { "type": "String" } }
-  },
   "transactionTransferTo": "Transfer → {wallet}",
   "@transactionTransferTo": {
     "description": "Row 3 label on a transfer row naming the counter wallet.",
@@ -338,68 +333,38 @@
   "transferNeedsTwoWallets": "Transfer için en az iki cüzdan gerekir.",
   "@transferNeedsTwoWallets": { "description": "Shown when there are fewer than two active wallets to transfer between." },
 
-  "billsTitle": "Borçlar & Alacaklar",
-  "@billsTitle": { "description": "App bar title / dashboard action for the pending bills & receivables screen." },
-  "billsSectionDebts": "Borçlar",
-  "@billsSectionDebts": { "description": "Section header listing pending expense bills." },
-  "billsSectionReceivables": "Alacaklar",
-  "@billsSectionReceivables": { "description": "Section header listing pending income receivables." },
-  "billsEmpty": "Bekleyen borç veya alacak yok.",
-  "@billsEmpty": { "description": "Empty-state on the pending bills & receivables screen." },
-  "billAdd": "Fatura/Alacak ekle",
-  "@billAdd": { "description": "Add-bill button / form title for a pending bill or receivable." },
-  "billModeLabel": "Bekleyen fatura/alacak",
-  "@billModeLabel": { "description": "Toggle on the transaction form switching it to pending-bill creation mode." },
-  "billModeHint": "Şimdi para hareketi olmaz; sonra kısmi ödemeler eklenir.",
-  "@billModeHint": { "description": "Hint explaining a bill records no money movement until payments are applied." },
-  "billPlannedLabel": "Planlanan tutar",
-  "@billPlannedLabel": { "description": "Planned amount field label on the bill form." },
-  "billRemaining": "Kalan {amount}",
-  "@billRemaining": {
-    "description": "Remaining amount on a bill row/detail.",
+  "pendingChipDebt": "Borç",
+  "@pendingChipDebt": { "description": "Row-3 chip on a pending (future-dated, unpaid) expense — money owed." },
+  "pendingChipReceivable": "Alacak",
+  "@pendingChipReceivable": { "description": "Row-3 chip on a pending (future-dated, unpaid) income — money to collect." },
+  "pendingDue": "Vade: {date}",
+  "@pendingDue": {
+    "description": "Due-date label on a pending row.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "pendingOverdue": "Gecikmiş",
+  "@pendingOverdue": { "description": "Emphasis label on a pending item whose due date is in the past." },
+
+  "settlePayTitle": "Öde",
+  "@settlePayTitle": { "description": "Swipe action / settle-sheet title for paying a pending expense." },
+  "settleCollectTitle": "Tahsil et",
+  "@settleCollectTitle": { "description": "Swipe action / settle-sheet title for collecting a pending income." },
+  "settleAmountLabel": "Tutar",
+  "@settleAmountLabel": { "description": "Amount field label on the settle sheet (prefilled with the remaining)." },
+  "settleRemaining": "Kalan: {amount}",
+  "@settleRemaining": {
+    "description": "Remaining-amount hint on the settle sheet.",
     "placeholders": { "amount": { "type": "String" } }
   },
-  "billProgress": "{settled} / {planned}",
-  "@billProgress": {
-    "description": "Settled over planned amounts shown next to a bill's progress bar.",
-    "placeholders": { "settled": { "type": "String" }, "planned": { "type": "String" } }
+  "settleDateLabel": "Ödeme tarihi",
+  "@settleDateLabel": { "description": "Payment-date field label on the settle sheet (defaults to today)." },
+  "validationOverpayment": "Tutar kalanı ({remaining}) aşamaz.",
+  "@validationOverpayment": {
+    "description": "Validation error when the settle amount exceeds the remaining balance.",
+    "placeholders": { "remaining": { "type": "String" } }
   },
-  "billDetailTitle": "Fatura ayrıntısı",
-  "@billDetailTitle": { "description": "App bar title for a single bill's detail/payment-history screen." },
-  "billDeleted": "Fatura silindi",
-  "@billDeleted": { "description": "SnackBar text after queuing a bill (and its payments) delete." },
-  "billDeleteTitle": "Faturayı sil",
-  "@billDeleteTitle": { "description": "Confirmation dialog title for deleting a bill with payments." },
-  "billDeleteMessage": "Bu fatura ve tüm ödemeleri silinecek. Devam edilsin mi?",
-  "@billDeleteMessage": { "description": "Confirmation dialog body for cascade-deleting a bill and its payments." },
-
-  "paymentAdd": "Ödeme ekle",
-  "@paymentAdd": { "description": "Add-payment button / form title for applying a payment to a bill." },
-  "paymentHistoryTitle": "Ödeme geçmişi",
-  "@paymentHistoryTitle": { "description": "Section header for a bill's list of child payments." },
-  "paymentHistoryEmpty": "Henüz ödeme yok.",
-  "@paymentHistoryEmpty": { "description": "Empty-state under a bill with no payments yet." },
-  "paymentSourceWalletLabel": "Kaynak cüzdan",
-  "@paymentSourceWalletLabel": { "description": "Source-wallet picker label on the payment form." },
-  "paymentAmountLabel": "Ödeme tutarı",
-  "@paymentAmountLabel": { "description": "Payment amount field label on the payment form." },
-  "paymentRateToParentLabel": "Kur ({from} → {to})",
-  "@paymentRateToParentLabel": {
-    "description": "Rate field label converting the source wallet currency to the bill's currency.",
-    "placeholders": { "from": { "type": "String" }, "to": { "type": "String" } }
-  },
-  "paymentReversed": "Ödeme geri alındı",
-  "@paymentReversed": { "description": "SnackBar text after queuing a payment reversal." },
-
-  "overpaymentTitle": "Kalan tutarı aşıyor",
-  "@overpaymentTitle": { "description": "Dialog title shown when a payment exceeds the bill's remaining balance." },
-  "overpaymentMessage": "Ödeme {attempted}, kalan {remaining}. Ne yapmak istersiniz?",
-  "@overpaymentMessage": {
-    "description": "Dialog body comparing the attempted payment to the remaining balance.",
-    "placeholders": { "attempted": { "type": "String" }, "remaining": { "type": "String" } }
-  },
-  "overpaymentCap": "Kalanla sınırla",
-  "@overpaymentCap": { "description": "Dialog action capping the payment to the remaining balance." },
-  "overpaymentAllow": "Fazla ödemeye izin ver",
-  "@overpaymentAllow": { "description": "Dialog action allowing the payment to exceed the remaining balance." }
+  "settledExpense": "Ödendi",
+  "@settledExpense": { "description": "SnackBar text after settling (paying) a pending expense." },
+  "settledIncome": "Tahsil edildi",
+  "@settledIncome": { "description": "SnackBar text after settling (collecting) a pending income." }
 }
