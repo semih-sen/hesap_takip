@@ -11,6 +11,18 @@ import '../tables/wallets.dart';
 
 part 'transaction_dao.g.dart';
 
+/// DAO-level base-currency totals produced by [TransactionDao.watchSummaryTotals].
+///
+/// Deliberately a local value type (no feature imports) so the DAO stays free of
+/// the presentation layer; the repository maps this to the feature's
+/// `SummaryData`. Both fields are base-currency minor units and non-negative.
+class SummaryTotals {
+  const SummaryTotals({required this.incomeMinor, required this.expenseMinor});
+
+  final int incomeMinor;
+  final int expenseMinor;
+}
+
 /// One category chip carried on a [TransactionListRowData]: enough to render a
 /// color dot + name in Row 3 of the bespoke list item, with no follow-up query.
 class TransactionRowCategory {
@@ -171,6 +183,64 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
         wallets,
       },
     ).map((QueryRow row) => row.read<int>('balance')).watchSingle();
+  }
+
+  /// Reactive base-currency income/expense totals for the Summary scope
+  /// (PROJECT_PLAN §8.3 / §9). Sums the SNAPSHOTTED `base_amount_minor` — never
+  /// recomputes history from a live rate, and never sums `amount_minor` across
+  /// currencies. Only `completed`, non-`transfer` rows whose `value_date` falls
+  /// within [range] (inclusive on both ends) count.
+  ///
+  /// [walletIds] empty ⇒ ALL wallets (NO wallet predicate). ⚠️ This is the
+  /// OPPOSITE of [watchWalletsBalanceMinor], which returns 0 for an empty set —
+  /// only a `wallet_id IN (...)` clause is appended when the set is non-empty.
+  ///
+  /// Aggregation is at the TRANSACTION grain: `transaction_categories` is never
+  /// joined, so a multi-category (split) transaction is counted exactly once.
+  ///
+  /// Enum filters bind the stored index (`.index`), and the period bounds are
+  /// built with [DateOnlyConverter.toSql] so the lexical text compare matches the
+  /// stored `value_date` column (same pattern as [watchTransactionRows]).
+  Stream<SummaryTotals> watchSummaryTotals({
+    required DateRange range,
+    required Set<int> walletIds,
+  }) {
+    // ?1 income, ?2 expense (SELECT CASE); ?3 completed, ?4 transfer, ?5 start,
+    // ?6 end (WHERE); any wallet ids follow only when the set is non-empty.
+    final List<Variable> vars = <Variable>[
+      Variable.withInt(TransactionType.income.index),
+      Variable.withInt(TransactionType.expense.index),
+      Variable.withInt(TransactionStatus.completed.index),
+      Variable.withInt(TransactionType.transfer.index),
+      Variable.withString(_dateOnly.toSql(range.start)),
+      Variable.withString(_dateOnly.toSql(range.end)),
+    ];
+
+    String walletClause = '';
+    if (walletIds.isNotEmpty) {
+      final List<int> ids = walletIds.toList();
+      walletClause = ' AND wallet_id IN (${_placeholders(ids.length)})';
+      vars.addAll(ids.map(Variable.withInt));
+    }
+
+    return customSelect(
+      'SELECT '
+      'COALESCE(SUM(CASE WHEN type = ? THEN base_amount_minor ELSE 0 END), 0) '
+      '  AS income_minor, '
+      'COALESCE(SUM(CASE WHEN type = ? THEN base_amount_minor ELSE 0 END), 0) '
+      '  AS expense_minor '
+      'FROM transactions '
+      'WHERE status = ? AND type <> ? '
+      'AND value_date >= ? AND value_date <= ?'
+      '$walletClause',
+      variables: vars,
+      readsFrom: <ResultSetImplementation<dynamic, dynamic>>{transactions},
+    ).map(
+      (QueryRow row) => SummaryTotals(
+        incomeMinor: row.read<int>('income_minor'),
+        expenseMinor: row.read<int>('expense_minor'),
+      ),
+    ).watchSingle();
   }
 
   Future<bool> updateTransaction(Transaction entry) =>

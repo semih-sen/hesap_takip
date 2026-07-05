@@ -2,6 +2,8 @@ import 'package:drift/drift.dart' show Value;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../core/currency/split_allocation.dart';
+import '../../core/date/date_range.dart';
+import '../../features/transactions/services/summary_data.dart';
 import '../database/app_database.dart' as db;
 import '../database/app_database_provider.dart';
 import '../database/daos/transaction_dao.dart';
@@ -39,6 +41,15 @@ abstract interface class TransactionRepository {
   Stream<List<TransactionListRowData>> watchTransactionRows(
     TransactionFilter filter, {
     required int limit,
+  });
+
+  /// Reactive base-currency income/expense/net over [walletIds] for [period]
+  /// (the Summary scope, PROJECT_PLAN §8.3). [walletIds] empty ⇒ ALL wallets.
+  /// Transfers and non-`completed` rows are excluded; totals come from the base
+  /// snapshot (`base_amount_minor`), never a recomputed rate.
+  Stream<SummaryData> watchSummary({
+    required Set<int> walletIds,
+    required DateRange period,
   });
 
   /// The transaction with [id], or `null`.
@@ -90,6 +101,21 @@ class DriftTransactionRepository implements TransactionRepository {
     TransactionFilter filter, {
     required int limit,
   }) => _db.transactionDao.watchTransactionRows(filter, limit: limit);
+
+  @override
+  Stream<SummaryData> watchSummary({
+    required Set<int> walletIds,
+    required DateRange period,
+  }) {
+    return _db.transactionDao
+        .watchSummaryTotals(range: period, walletIds: walletIds)
+        .map(
+          (SummaryTotals t) => SummaryData(
+            incomeMinor: t.incomeMinor,
+            expenseMinor: t.expenseMinor,
+          ),
+        );
+  }
 
   @override
   Future<Transaction?> findTransaction(int id) async =>

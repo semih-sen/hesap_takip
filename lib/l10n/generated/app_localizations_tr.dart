@@ -349,4 +349,37 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get filterNoCategories => 'Kategori yok.';
+
+  @override
+  String get summaryTitle => 'Özet';
+
+  @override
+  String get summaryIncome => 'Gelir';
+
+  @override
+  String get summaryExpense => 'Gider';
+
+  @override
+  String get summaryNet => 'Net';
+
+  @override
+  String get summaryAccountsAll => 'Tümü';
+
+  @override
+  String get summarySelectAccount => 'Hesap seç';
+
+  @override
+  String get summaryPeriodLast30Days => 'Son 30 gün';
+
+  @override
+  String get summaryPeriodAllTime => 'Tüm zamanlar';
+
+  @override
+  String get summaryPeriodCustom => 'Özel';
+
+  @override
+  String get summaryPeriodPrevious => 'Önceki ay';
+
+  @override
+  String get summaryPeriodNext => 'Sonraki ay';
 }

@@ -735,6 +735,72 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Kategori yok.'**
   String get filterNoCategories;
+
+  /// Section title for the dashboard summary card.
+  ///
+  /// In tr, this message translates to:
+  /// **'Özet'**
+  String get summaryTitle;
+
+  /// Summary figure label: total income for the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gelir'**
+  String get summaryIncome;
+
+  /// Summary figure label: total expense for the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gider'**
+  String get summaryExpense;
+
+  /// Summary figure label: net (income minus expense) for the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Net'**
+  String get summaryNet;
+
+  /// Selector chip aggregating the summary over all accounts.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümü'**
+  String get summaryAccountsAll;
+
+  /// Label/tooltip for the summary account selector.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap seç'**
+  String get summarySelectAccount;
+
+  /// Period preset: the last 30 days.
+  ///
+  /// In tr, this message translates to:
+  /// **'Son 30 gün'**
+  String get summaryPeriodLast30Days;
+
+  /// Period preset: all time.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm zamanlar'**
+  String get summaryPeriodAllTime;
+
+  /// Period preset: a custom date range chosen via the date-range picker.
+  ///
+  /// In tr, this message translates to:
+  /// **'Özel'**
+  String get summaryPeriodCustom;
+
+  /// Tooltip for the button navigating to the previous month.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önceki ay'**
+  String get summaryPeriodPrevious;
+
+  /// Tooltip for the button navigating to the next month.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonraki ay'**
+  String get summaryPeriodNext;
 }
 
 class _AppLocalizationsDelegate
