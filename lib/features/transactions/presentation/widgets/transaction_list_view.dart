@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/date/app_date.dart';
 import '../../../../core/undo/entity_actions.dart';
 import '../../../../core/undo/undo_service.dart';
+import '../../../../data/database/tables/enums.dart';
 import '../../../../data/models/transaction.dart';
 import '../../../../data/repositories/transaction_repository.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -13,6 +14,7 @@ import '../../../shared/undo_snackbar.dart';
 import '../../application/transactions_providers.dart';
 import '../transaction_date_group.dart';
 import '../transaction_form_page.dart';
+import '../transfer_form_page.dart';
 import 'transaction_list_item.dart';
 
 /// The transaction list body: date-grouped **sticky** sections built with
@@ -73,10 +75,29 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
     }
   }
 
-  void _edit(int id) {
-    Navigator.of(context).push(
+  /// Opens the correct editor for [row]: transfers edit BOTH legs via the
+  /// transfer form (routed by `transferGroupId`), everything else via the
+  /// income/expense form.
+  Future<void> _edit(TransactionListRow row) async {
+    if (row.type == TransactionType.transfer) {
+      final TransactionRepository repo = ref.read(
+        transactionRepositoryProvider,
+      );
+      final Transaction? txn = await repo.findTransaction(row.id);
+      final String? groupId = txn?.transferGroupId;
+      if (groupId == null || !mounted) {
+        return;
+      }
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => TransferFormPage(transferGroupId: groupId),
+        ),
+      );
+      return;
+    }
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => TransactionFormPage(transactionId: id),
+        builder: (_) => TransactionFormPage(transactionId: row.id),
       ),
     );
   }
@@ -88,6 +109,36 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
     if (txn == null || !mounted) {
       return;
     }
+
+    // A transfer deletes BOTH legs as one undoable command (Flag B-1).
+    final String? groupId = txn.transferGroupId;
+    if (txn.type == TransactionType.transfer && groupId != null) {
+      final List<Transaction> legs = await repo.transferLegs(groupId);
+      if (legs.length != 2 || !mounted) {
+        return;
+      }
+      final String transferLabel = l10n.transferDeleted;
+      final String? transferPendingId = await ref
+          .read(undoServiceProvider)
+          .enqueue(
+            DeleteTransferAction(
+              transferGroupId: groupId,
+              legTransactionIds: <int>[for (final Transaction l in legs) l.id],
+              label: transferLabel,
+            ),
+          );
+      if (transferPendingId == null || !mounted) {
+        return;
+      }
+      showUndoSnackBar(
+        context,
+        ref,
+        pendingId: transferPendingId,
+        message: transferLabel,
+      );
+      return;
+    }
+
     final String label = l10n.transactionDeleted;
     final String? pendingId = await ref
         .read(undoServiceProvider)
@@ -158,7 +209,7 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
                         return InkWell(
                           key: ValueKey<int>(row.id),
                           borderRadius: AppRadius.mdAll,
-                          onTap: () => _edit(row.id),
+                          onTap: () => _edit(row),
                           onLongPress: () => _delete(row),
                           child: TransactionListItem(row: row),
                         );

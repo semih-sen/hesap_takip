@@ -754,11 +754,53 @@ abstract class AppLocalizations {
   /// **'Gider'**
   String get summaryExpense;
 
-  /// Summary figure label: net (income minus expense) for the period.
+  /// Summary figure label: period net balance (income total minus expense total).
   ///
   /// In tr, this message translates to:
-  /// **'Net'**
+  /// **'Bakiye'**
   String get summaryNet;
+
+  /// Row-1 balance: opening carry-over at the start of the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Devreden'**
+  String get summaryCarriedOver;
+
+  /// Row-1 hero balance: actual cash on hand today (completed only).
+  ///
+  /// In tr, this message translates to:
+  /// **'Bugünkü Kasa'**
+  String get summaryCurrentCash;
+
+  /// Row-1 balance: closing carry-over at the end of the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Devredecek'**
+  String get summaryCarryForward;
+
+  /// Row-3 breakdown: completed income collected in the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tahsilat'**
+  String get summaryCollected;
+
+  /// Row-3 breakdown: pending income still receivable in the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alacak'**
+  String get summaryReceivable;
+
+  /// Row-3 breakdown: pending expense still payable in the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Borç'**
+  String get summaryPayable;
+
+  /// Row-3 breakdown: completed expense paid in the period.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ödeme'**
+  String get summaryPaid;
 
   /// Selector chip aggregating the summary over all accounts.
   ///
@@ -801,6 +843,84 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Sonraki ay'**
   String get summaryPeriodNext;
+
+  /// Add-transfer button / form title / app-bar action tooltip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Transfer ekle'**
+  String get transferAdd;
+
+  /// Edit-transfer form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Transferi düzenle'**
+  String get transferEdit;
+
+  /// Source-wallet picker label on the transfer form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderen cüzdan'**
+  String get transferFromLabel;
+
+  /// Destination-wallet picker label on the transfer form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alan cüzdan'**
+  String get transferToLabel;
+
+  /// Source amount field label on the transfer form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderilen tutar'**
+  String get transferFromAmountLabel;
+
+  /// Destination amount field label (cross-currency) on the transfer form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Alınan tutar'**
+  String get transferToAmountLabel;
+
+  /// Exchange-rate field label showing the source and destination currency codes.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kur ({from} → {to})'**
+  String transferRateLabel(String from, String to);
+
+  /// SnackBar text after queuing a transfer delete.
+  ///
+  /// In tr, this message translates to:
+  /// **'Transfer silindi'**
+  String get transferDeleted;
+
+  /// Validation error: source and destination wallets are identical.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gönderen ve alan cüzdan farklı olmalı.'**
+  String get transferErrorSameWallet;
+
+  /// Validation error: a transfer amount is zero or negative.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tutar sıfırdan büyük olmalı.'**
+  String get transferErrorNonPositive;
+
+  /// Validation error: a transfer touches an archived wallet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Arşivli cüzdanlarla transfer yapılamaz.'**
+  String get transferErrorArchived;
+
+  /// Validation error: a selected wallet no longer exists.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdan bulunamadı.'**
+  String get transferErrorMissingWallet;
+
+  /// Shown when there are fewer than two active wallets to transfer between.
+  ///
+  /// In tr, this message translates to:
+  /// **'Transfer için en az iki cüzdan gerekir.'**
+  String get transferNeedsTwoWallets;
 }
 
 class _AppLocalizationsDelegate

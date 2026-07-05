@@ -360,7 +360,28 @@ class AppLocalizationsTr extends AppLocalizations {
   String get summaryExpense => 'Gider';
 
   @override
-  String get summaryNet => 'Net';
+  String get summaryNet => 'Bakiye';
+
+  @override
+  String get summaryCarriedOver => 'Devreden';
+
+  @override
+  String get summaryCurrentCash => 'Bugünkü Kasa';
+
+  @override
+  String get summaryCarryForward => 'Devredecek';
+
+  @override
+  String get summaryCollected => 'Tahsilat';
+
+  @override
+  String get summaryReceivable => 'Alacak';
+
+  @override
+  String get summaryPayable => 'Borç';
+
+  @override
+  String get summaryPaid => 'Ödeme';
 
   @override
   String get summaryAccountsAll => 'Tümü';
@@ -382,4 +403,47 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get summaryPeriodNext => 'Sonraki ay';
+
+  @override
+  String get transferAdd => 'Transfer ekle';
+
+  @override
+  String get transferEdit => 'Transferi düzenle';
+
+  @override
+  String get transferFromLabel => 'Gönderen cüzdan';
+
+  @override
+  String get transferToLabel => 'Alan cüzdan';
+
+  @override
+  String get transferFromAmountLabel => 'Gönderilen tutar';
+
+  @override
+  String get transferToAmountLabel => 'Alınan tutar';
+
+  @override
+  String transferRateLabel(String from, String to) {
+    return 'Kur ($from → $to)';
+  }
+
+  @override
+  String get transferDeleted => 'Transfer silindi';
+
+  @override
+  String get transferErrorSameWallet =>
+      'Gönderen ve alan cüzdan farklı olmalı.';
+
+  @override
+  String get transferErrorNonPositive => 'Tutar sıfırdan büyük olmalı.';
+
+  @override
+  String get transferErrorArchived => 'Arşivli cüzdanlarla transfer yapılamaz.';
+
+  @override
+  String get transferErrorMissingWallet => 'Cüzdan bulunamadı.';
+
+  @override
+  String get transferNeedsTwoWallets =>
+      'Transfer için en az iki cüzdan gerekir.';
 }

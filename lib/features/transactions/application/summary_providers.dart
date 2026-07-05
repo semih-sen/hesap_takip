@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/date/app_date.dart';
 import '../../../core/date/date_range.dart';
 import '../../../data/models/wallet.dart';
+import '../../../data/repositories/settings_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../wallets/application/wallets_providers.dart';
 import '../services/summary_data.dart';
@@ -69,39 +70,49 @@ class SummaryPeriod extends _$SummaryPeriod {
       state = SummaryPeriodValue.custom(range);
 }
 
-/// Derived, reactive base-currency summary. Watches BOTH summary-scope providers
-/// (account selection + period) and the repository — nothing from the List scope.
+/// Derived, reactive 9-cell base-currency summary. Watches BOTH summary-scope
+/// providers (account selection + period) plus the wallet list and base currency
+/// (so archiving/adding a wallet or changing the base re-resolves) — and NOTHING
+/// from the List scope (the two-scope rule holds).
 ///
-/// Empty account selection ⇒ empty wallet set ⇒ ALL wallets (the DAO omits the
-/// wallet predicate). A NON-empty selection that resolves to NO wallets (e.g. an
-/// account with no wallets) short-circuits to [SummaryData.zero] rather than
-/// falling through to the empty-set-means-all branch.
+/// The account selection is resolved to the underlying non-archived wallet ids
+/// here (D1): the repository then treats an empty set as ALL non-archived
+/// wallets. A NON-empty account selection that resolves to NO wallets
+/// short-circuits to a zero card rather than falling through to "all".
 @riverpod
 Stream<SummaryData> summary(Ref ref) async* {
   final Set<int> accountSelection = ref.watch(summaryAccountSelectionProvider);
   final DateRange range = ref.watch(summaryPeriodProvider).range;
+  final String base = ref.watch(baseCurrencyProvider);
+  final List<Wallet> wallets =
+      ref.watch(allWalletsProvider).asData?.value ?? const <Wallet>[];
   final TransactionRepository repo = ref.watch(transactionRepositoryProvider);
+  final DateTime today = AppDate.today();
 
   if (accountSelection.isEmpty) {
-    // ALL accounts: pass an empty wallet set so the DAO adds no wallet predicate.
-    yield* repo.watchSummary(walletIds: const <int>{}, period: range);
+    // ALL accounts → empty wallet set → repo resolves to all non-archived.
+    yield* repo.watchSummary(
+      walletIds: const <int>{},
+      period: range,
+      today: today,
+    );
     return;
   }
 
-  // Resolve the selected accounts to their wallet ids, reactively.
-  final List<Wallet> wallets =
-      ref.watch(allWalletsProvider).asData?.value ?? const <Wallet>[];
   final Set<int> resolvedWalletIds = <int>{
     for (final Wallet w in wallets)
-      if (accountSelection.contains(w.accountId)) w.id,
+      if (!w.isArchived && accountSelection.contains(w.accountId)) w.id,
   };
 
   if (resolvedWalletIds.isEmpty) {
-    // Explicit non-empty account selection but no wallets under it → zero, NOT
-    // "all" (do not fall into the empty-set-means-all branch above).
-    yield SummaryData.zero;
+    // Explicit selection but no (active) wallets under it → zero, NOT "all".
+    yield SummaryData.zero(base);
     return;
   }
 
-  yield* repo.watchSummary(walletIds: resolvedWalletIds, period: range);
+  yield* repo.watchSummary(
+    walletIds: resolvedWalletIds,
+    period: range,
+    today: today,
+  );
 }

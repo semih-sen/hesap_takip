@@ -36,6 +36,10 @@ class WalletDao extends DatabaseAccessor<AppDatabase> with _$WalletDaoMixin {
 
   Stream<List<Wallet>> watchAllWallets() => _ordered().watch();
 
+  /// One-shot read of every wallet (used by the summary's initial-balance
+  /// resolution, which needs `initialBalanceMinor` / currency / archived flag).
+  Future<List<Wallet>> getAllWallets() => _ordered().get();
+
   Stream<List<Wallet>> watchWalletsForAccount(int accountId) =>
       (_ordered()..where((t) => t.accountId.equals(accountId))).watch();
 

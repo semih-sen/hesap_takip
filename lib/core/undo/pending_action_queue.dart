@@ -22,10 +22,11 @@ class PendingEntry {
 /// overlay. Kept as an extension on the list so the overlay stays reactive by
 /// simply `ref.watch`-ing the queue provider's value.
 extension PendingQueueView on List<PendingEntry> {
-  /// The pending entry targeting [ref], or null.
+  /// The pending entry affecting [ref], or null. Uses [UndoableAction.affects]
+  /// so a multi-leg action (transfer delete) matches every row it touches.
   PendingEntry? entryForTarget(EntityRef ref) {
     for (final PendingEntry entry in this) {
-      if (entry.action.target == ref) {
+      if (entry.action.affects(ref)) {
         return entry;
       }
     }

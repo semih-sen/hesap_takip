@@ -227,3 +227,43 @@ class DeleteTransactionAction extends UndoableAction {
   Future<void> commit(AppDatabase db) =>
       db.transactionDao.deleteTransaction(transaction.id);
 }
+
+/// Deletes BOTH legs of a transfer after the undo window (Phase 8). It targets
+/// the two leg transaction ids so the optimistic overlay hides both rows at once
+/// ([affects]); [commit] removes the whole `transferGroupId` in one write. A
+/// transfer is always hard-deletable, so [canCommit] is `true`. There is never a
+/// state where only one leg is deleted (Flag B-1).
+class DeleteTransferAction extends UndoableAction {
+  DeleteTransferAction({
+    required this.transferGroupId,
+    required this.legTransactionIds,
+    required this.label,
+  }) : assert(legTransactionIds.length == 2, 'a transfer has exactly two legs');
+
+  final String transferGroupId;
+
+  /// The two leg transaction ids (drives the overlay for both rows).
+  final List<int> legTransactionIds;
+
+  @override
+  final String label;
+
+  @override
+  EntityRef get target =>
+      EntityRef(UndoEntityType.transaction, legTransactionIds.first);
+
+  @override
+  UndoEffect get effect => const DeleteEffect();
+
+  @override
+  bool affects(EntityRef ref) =>
+      ref.type == UndoEntityType.transaction &&
+      legTransactionIds.contains(ref.id);
+
+  @override
+  Future<bool> canCommit(AppDatabase db) async => true;
+
+  @override
+  Future<void> commit(AppDatabase db) =>
+      db.transactionDao.deleteTransferGroup(transferGroupId);
+}

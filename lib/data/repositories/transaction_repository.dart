@@ -1,6 +1,8 @@
+import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../core/currency/currency_service.dart';
 import '../../core/currency/split_allocation.dart';
 import '../../core/date/date_range.dart';
 import '../../features/transactions/services/summary_data.dart';
@@ -43,17 +45,24 @@ abstract interface class TransactionRepository {
     required int limit,
   });
 
-  /// Reactive base-currency income/expense/net over [walletIds] for [period]
-  /// (the Summary scope, PROJECT_PLAN §8.3). [walletIds] empty ⇒ ALL wallets.
-  /// Transfers and non-`completed` rows are excluded; totals come from the base
-  /// snapshot (`base_amount_minor`), never a recomputed rate.
+  /// Reactive 9-cell base-currency [SummaryData] over [walletIds] for [period]
+  /// (Summary Card Refactor §A.4). [walletIds] empty ⇒ ALL non-archived wallets;
+  /// archived wallets are always excluded (Flag A-3). Row-1 running balances
+  /// include each effective wallet's `initialBalanceMinor` converted to base
+  /// (Decision 1A / Flag A-4) plus completed transfer legs (Decision 2A); Row-2/3
+  /// flows exclude transfers. All totals read the snapshotted `baseAmountMinor`
+  /// (Flag A-2). [today] is injected for testability.
   Stream<SummaryData> watchSummary({
     required Set<int> walletIds,
     required DateRange period,
+    required DateTime today,
   });
 
   /// The transaction with [id], or `null`.
   Future<Transaction?> findTransaction(int id);
+
+  /// Both legs of the transfer [transferGroupId] (0 or 2 rows), as domain models.
+  Future<List<Transaction>> transferLegs(String transferGroupId);
 
   /// The category links (id + optional split allocation) attached to [id].
   Future<List<TransactionCategoryLink>> categoryLinksFor(int id);
@@ -102,24 +111,117 @@ class DriftTransactionRepository implements TransactionRepository {
     required int limit,
   }) => _db.transactionDao.watchTransactionRows(filter, limit: limit);
 
+  static const CurrencyService _currency = CurrencyService();
+
   @override
   Stream<SummaryData> watchSummary({
     required Set<int> walletIds,
     required DateRange period,
-  }) {
-    return _db.transactionDao
-        .watchSummaryTotals(range: period, walletIds: walletIds)
+    required DateTime today,
+  }) async* {
+    final String base = (await _db.settingsDao.getSettings()).baseCurrencyCode;
+
+    // Resolve the effective, non-archived wallet set: empty selection ⇒ every
+    // non-archived wallet; otherwise the selected non-archived wallets (F1/A-3).
+    final List<db.Wallet> all = await _db.walletDao.getAllWallets();
+    final List<db.Wallet> effective = all
+        .where(
+          (db.Wallet w) =>
+              !w.isArchived &&
+              (walletIds.isEmpty || walletIds.contains(w.id)),
+        )
+        .toList(growable: false);
+
+    if (effective.isEmpty) {
+      // No wallets in scope → an all-zero card (never an empty `IN ()`).
+      yield SummaryData.zero(base);
+      return;
+    }
+
+    // Row-1 initial balances converted to base (Decision 1A / Flag A-4): base
+    // -currency wallets contribute directly; others convert at the latest cached
+    // wallet→base rate (fallback 1.0 when none is cached).
+    int initialBaseMinor = 0;
+    for (final db.Wallet w in effective) {
+      if (w.currencyCode == base) {
+        initialBaseMinor += w.initialBalanceMinor;
+        continue;
+      }
+      final db.ExchangeRate? cached = await _db.exchangeRateDao.getLatestRate(
+        baseCurrency: w.currencyCode,
+        quoteCurrency: base,
+        asOf: DateTime(9999, 12, 31),
+      );
+      final Decimal rate = cached?.rate ?? Decimal.one;
+      initialBaseMinor += _currency.convertMinor(
+        amountMinor: w.initialBalanceMinor,
+        fromCode: w.currencyCode,
+        toCode: base,
+        rate: rate,
+      );
+    }
+
+    final Set<int> effectiveIds = <int>{
+      for (final db.Wallet w in effective) w.id,
+    };
+
+    yield* _db.transactionDao
+        .watchSummaryBuckets(
+          walletIds: effectiveIds,
+          period: period,
+          today: today,
+        )
         .map(
-          (SummaryTotals t) => SummaryData(
-            incomeMinor: t.incomeMinor,
-            expenseMinor: t.expenseMinor,
-          ),
+          (SummaryBuckets b) => _assemble(b, initialBaseMinor, base),
         );
+  }
+
+  /// Assembles the DAO buckets + converted initial balance into the 9-cell
+  /// [SummaryData] (Summary Card Refactor §A.4).
+  static SummaryData _assemble(
+    SummaryBuckets b,
+    int initialBaseMinor,
+    String base,
+  ) {
+    final int incomeTotal = b.collectedIncomeMinor + b.receivableIncomeMinor;
+    final int expenseTotal = b.paidExpenseMinor + b.payableExpenseMinor;
+    final int netBalance = incomeTotal - expenseTotal;
+    final int carriedOver = initialBaseMinor +
+        b.carriedNonTransferSignedMinor +
+        b.carriedTransferSignedMinor;
+    // Devredecek = Devreden + period net + in-period completed transfer legs, so
+    // Devredecek(N) == Devreden(N+1) for contiguous periods (transfers are not
+    // in `netBalance`, hence the explicit in-period transfer term — Decision 2A).
+    final int carryForward =
+        carriedOver + netBalance + b.inPeriodTransferSignedMinor;
+    final int currentCash = initialBaseMinor + b.cashFlowSignedMinor;
+
+    return SummaryData(
+      baseCurrencyCode: base,
+      carriedOverMinor: carriedOver,
+      currentCashMinor: currentCash,
+      carryForwardMinor: carryForward,
+      incomeTotalMinor: incomeTotal,
+      expenseTotalMinor: expenseTotal,
+      netBalanceMinor: netBalance,
+      collectedIncomeMinor: b.collectedIncomeMinor,
+      receivableIncomeMinor: b.receivableIncomeMinor,
+      paidExpenseMinor: b.paidExpenseMinor,
+      payableExpenseMinor: b.payableExpenseMinor,
+    );
   }
 
   @override
   Future<Transaction?> findTransaction(int id) async =>
       (await _db.transactionDao.getTransactionById(id))?.toDomain();
+
+  @override
+  Future<List<Transaction>> transferLegs(String transferGroupId) async {
+    final List<db.Transaction> legs = await _db.transactionDao.getTransferLegs(
+      transferGroupId,
+    );
+    return legs.map((db.Transaction l) => l.toDomain()).toList(growable: false);
+  }
 
   @override
   Future<List<TransactionCategoryLink>> categoryLinksFor(int id) async {

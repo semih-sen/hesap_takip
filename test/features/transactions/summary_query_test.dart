@@ -4,24 +4,36 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hesap_takip/core/date/date_range.dart';
 import 'package:hesap_takip/data/database/app_database.dart';
-import 'package:hesap_takip/data/database/daos/transaction_dao.dart';
 import 'package:hesap_takip/data/database/tables/enums.dart';
+import 'package:hesap_takip/data/repositories/transaction_repository.dart';
+import 'package:hesap_takip/features/transactions/services/summary_data.dart';
 
-/// PROJECT_PLAN Phase 7, §5 + proactive flags F1–F5: the base-currency Summary
-/// query sums the SNAPSHOTTED `base_amount_minor` for completed, non-transfer
-/// rows in the period, honors the empty-set-means-all wallet rule, and counts a
-/// multi-category transaction exactly once.
+/// Summary Card Refactor §A.8: the 9-cell base-currency summary sums snapshotted
+/// `baseAmountMinor`, honors the completed/pending buckets, includes initial
+/// balances + completed transfer legs in Row-1 (Decisions 1A/2A), and keeps the
+/// invariants Gelir=Tahsilat+Alacak, Gider=Ödeme+Borç, Devredecek(N)=Devreden(N+1).
 void main() {
   late AppDatabase db;
+  late DriftTransactionRepository repo;
 
-  /// July 2026, inclusive on both ends.
+  // Contiguous months so the carry-forward continuity invariant is meaningful.
+  final DateRange june = DateRange(
+    start: DateTime(2026, 6, 1),
+    end: DateTime(2026, 6, 30),
+  );
   final DateRange july = DateRange(
     start: DateTime(2026, 7, 1),
     end: DateTime(2026, 7, 31),
   );
+  final DateRange august = DateRange(
+    start: DateTime(2026, 8, 1),
+    end: DateTime(2026, 8, 31),
+  );
+  final DateTime endOfJuly = DateTime(2026, 7, 31);
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    repo = DriftTransactionRepository(db);
   });
 
   tearDown(() async {
@@ -37,220 +49,170 @@ void main() {
     ),
   );
 
-  Future<int> seedWallet(int accountId, {String code = 'TRY'}) =>
-      db.walletDao.createWallet(
-        WalletsCompanion.insert(
-          accountId: accountId,
-          name: 'Cüzdan',
-          currencyCode: code,
-          colorValue: 0xFF111111,
-          iconCodePoint: 0xE001,
-        ),
-      );
+  Future<int> seedWallet(
+    int accountId, {
+    String code = 'TRY',
+    int initialMinor = 0,
+  }) => db.walletDao.createWallet(
+    WalletsCompanion.insert(
+      accountId: accountId,
+      name: 'Cüzdan-$code-$initialMinor',
+      currencyCode: code,
+      initialBalanceMinor: Value(initialMinor),
+      colorValue: 0xFF111111,
+      iconCodePoint: 0xE001,
+    ),
+  );
 
   Future<int> insertTxn(
     int walletId, {
     required TransactionType type,
+    required FlowDirection flow,
+    required TransactionStatus status,
     required int amountMinor,
     required int baseAmountMinor,
-    TransactionStatus status = TransactionStatus.completed,
+    required DateTime valueDate,
     String code = 'TRY',
-    DateTime? valueDate,
-  }) {
-    final FlowDirection flow = type == TransactionType.income
-        ? FlowDirection.inflow
-        : FlowDirection.outflow;
-    return db.transactionDao.createTransaction(
-      TransactionsCompanion.insert(
-        walletId: walletId,
-        type: type,
-        flowDirection: flow,
-        status: status,
-        amountMinor: amountMinor,
-        currencyCode: code,
-        exchangeRateToBase: Decimal.one,
-        baseAmountMinor: baseAmountMinor,
-        valueDate: valueDate ?? DateTime(2026, 7, 10),
-      ),
-    );
-  }
+    String? transferGroupId,
+  }) => db.transactionDao.createTransaction(
+    TransactionsCompanion.insert(
+      walletId: walletId,
+      type: type,
+      flowDirection: flow,
+      status: status,
+      amountMinor: amountMinor,
+      currencyCode: code,
+      exchangeRateToBase: Decimal.one,
+      baseAmountMinor: baseAmountMinor,
+      valueDate: valueDate,
+      transferGroupId: Value(transferGroupId),
+    ),
+  );
 
-  Future<SummaryTotals> summary({
-    Set<int> walletIds = const <int>{},
-    DateRange? range,
-  }) => db.transactionDao
-      .watchSummaryTotals(range: range ?? july, walletIds: walletIds)
+  Future<int> income(int w, int minor, DateTime d, TransactionStatus s) =>
+      insertTxn(w,
+          type: TransactionType.income,
+          flow: FlowDirection.inflow,
+          status: s,
+          amountMinor: minor,
+          baseAmountMinor: minor,
+          valueDate: d);
+
+  Future<int> expense(int w, int minor, DateTime d, TransactionStatus s) =>
+      insertTxn(w,
+          type: TransactionType.expense,
+          flow: FlowDirection.outflow,
+          status: s,
+          amountMinor: minor,
+          baseAmountMinor: minor,
+          valueDate: d);
+
+  Future<SummaryData> summary(DateRange period, {DateTime? today}) => repo
+      .watchSummary(
+        walletIds: const <int>{},
+        period: period,
+        today: today ?? endOfJuly,
+      )
       .first;
 
-  test('sums completed same-currency income/expense; net follows', () async {
+  test('computes all 10 fields incl. cross-currency base snapshot', () async {
     final int account = await seedAccount();
-    final int wallet = await seedWallet(account);
-    await insertTxn(wallet,
-        type: TransactionType.income, amountMinor: 10000, baseAmountMinor: 10000);
-    await insertTxn(wallet,
-        type: TransactionType.expense, amountMinor: 3000, baseAmountMinor: 3000);
+    final int w1 = await seedWallet(account, initialMinor: 100000); // 1000.00
+    final int w3 = await seedWallet(account, code: 'USD'); // cross-currency
 
-    final SummaryTotals totals = await summary();
-    expect(totals.incomeMinor, 10000);
-    expect(totals.expenseMinor, 3000);
-    // net is derived by SummaryData; here just confirm the raw legs.
-    expect(totals.incomeMinor - totals.expenseMinor, 7000);
-  });
-
-  test('uses base_amount_minor, NOT amount_minor, for cross-currency', () async {
-    final int account = await seedAccount();
-    final int usdWallet = await seedWallet(account, code: 'USD');
-    // 100 USD-cents snapshotted to 3500 TRY-kuruş at write time.
-    await insertTxn(usdWallet,
+    // June (before the July period).
+    await income(w1, 50000, DateTime(2026, 6, 10), TransactionStatus.completed);
+    await expense(w1, 20000, DateTime(2026, 6, 12), TransactionStatus.completed);
+    // July flows.
+    await income(w1, 30000, DateTime(2026, 7, 5), TransactionStatus.completed);
+    await income(w1, 20000, DateTime(2026, 7, 20), TransactionStatus.pending);
+    await expense(w1, 12000, DateTime(2026, 7, 10), TransactionStatus.completed);
+    await expense(w1, 8000, DateTime(2026, 7, 25), TransactionStatus.pending);
+    // Cross-currency income: amount 100 (USD) snapshotted to 3500 (TRY base).
+    await insertTxn(w3,
         type: TransactionType.income,
+        flow: FlowDirection.inflow,
+        status: TransactionStatus.completed,
         amountMinor: 100,
         baseAmountMinor: 3500,
+        valueDate: DateTime(2026, 7, 12),
         code: 'USD');
 
-    final SummaryTotals totals = await summary();
-    expect(totals.incomeMinor, 3500); // base snapshot
-    expect(totals.incomeMinor, isNot(100)); // never the wallet-currency amount
+    final SummaryData s = await summary(july);
+
+    // Row 3 — the base snapshot (3500), never the wallet amount (100).
+    expect(s.collectedIncomeMinor, 33500); // 30000 + 3500
+    expect(s.receivableIncomeMinor, 20000);
+    expect(s.paidExpenseMinor, 12000);
+    expect(s.payableExpenseMinor, 8000);
+    // Row 2.
+    expect(s.incomeTotalMinor, 53500);
+    expect(s.expenseTotalMinor, 20000);
+    expect(s.netBalanceMinor, 33500);
+    // Row 1: initial 100000 + June net 30000 = 130000 carried over.
+    expect(s.carriedOverMinor, 130000);
+    expect(s.carryForwardMinor, 163500); // 130000 + 33500
+    // Cash: initial 100000 + completed ≤ today (50000-20000+30000-12000+3500).
+    expect(s.currentCashMinor, 151500);
+    expect(s.baseCurrencyCode, 'TRY');
+
+    // Invariants.
+    expect(s.incomeTotalMinor, s.incomeTotalCheckMinor);
+    expect(s.expenseTotalMinor, s.expenseTotalCheckMinor);
   });
 
-  test('excludes pending (non-completed) rows', () async {
+  test('Devredecek(N) equals Devreden(N+1) across contiguous months', () async {
     final int account = await seedAccount();
-    final int wallet = await seedWallet(account);
-    await insertTxn(wallet,
-        type: TransactionType.expense,
-        amountMinor: 5000,
-        baseAmountMinor: 5000,
-        status: TransactionStatus.pending);
+    final int w1 = await seedWallet(account, initialMinor: 100000);
+    await income(w1, 50000, DateTime(2026, 6, 10), TransactionStatus.completed);
+    await expense(w1, 20000, DateTime(2026, 6, 12), TransactionStatus.completed);
+    await income(w1, 30000, DateTime(2026, 7, 5), TransactionStatus.completed);
+    await income(w1, 20000, DateTime(2026, 7, 20), TransactionStatus.pending);
+    await expense(w1, 12000, DateTime(2026, 7, 10), TransactionStatus.completed);
+    await expense(w1, 8000, DateTime(2026, 7, 25), TransactionStatus.pending);
 
-    final SummaryTotals totals = await summary();
-    expect(totals.incomeMinor, 0);
-    expect(totals.expenseMinor, 0);
+    final SummaryData julyS = await summary(july);
+    final SummaryData augS = await summary(august, today: DateTime(2026, 8, 31));
+    expect(julyS.carryForwardMinor, augS.carriedOverMinor);
+
+    // And the same for the June → July boundary.
+    final SummaryData juneS =
+        await summary(june, today: DateTime(2026, 6, 30));
+    expect(juneS.carryForwardMinor, julyS.carriedOverMinor);
   });
 
-  test('excludes transfer-type rows (both legs)', () async {
+  test('wallet filter narrows to the selected wallets', () async {
     final int account = await seedAccount();
     final int w1 = await seedWallet(account);
     final int w2 = await seedWallet(account);
-    // Out leg + in leg of a completed transfer.
-    await insertTxn(w1,
-        type: TransactionType.transfer,
-        amountMinor: 2000,
-        baseAmountMinor: 2000);
-    await insertTxn(w2,
-        type: TransactionType.transfer,
-        amountMinor: 2000,
-        baseAmountMinor: 2000);
-    // A real income so the query has something non-zero to prove it still counts.
-    await insertTxn(w1,
-        type: TransactionType.income, amountMinor: 800, baseAmountMinor: 800);
+    await income(w1, 1000, DateTime(2026, 7, 5), TransactionStatus.completed);
+    await income(w2, 4000, DateTime(2026, 7, 6), TransactionStatus.completed);
 
-    final SummaryTotals totals = await summary();
-    expect(totals.incomeMinor, 800);
-    expect(totals.expenseMinor, 0); // transfers never land in income/expense
+    final SummaryData all = await summary(july);
+    expect(all.incomeTotalMinor, 5000);
+
+    final SummaryData onlyW1 = await repo
+        .watchSummary(
+          walletIds: <int>{w1},
+          period: july,
+          today: endOfJuly,
+        )
+        .first;
+    expect(onlyW1.incomeTotalMinor, 1000);
   });
 
-  test('empty walletIds counts ALL wallets; non-empty filters (F1)', () async {
+  test('archived wallets are excluded from an all-wallets summary', () async {
     final int account = await seedAccount();
-    final int w1 = await seedWallet(account);
-    final int w2 = await seedWallet(account);
-    await insertTxn(w1,
-        type: TransactionType.income, amountMinor: 1000, baseAmountMinor: 1000);
-    await insertTxn(w2,
-        type: TransactionType.income, amountMinor: 4000, baseAmountMinor: 4000);
+    final int active = await seedWallet(account);
+    final int archived = await seedWallet(account);
+    await income(active, 1000, DateTime(2026, 7, 5), TransactionStatus.completed);
+    await income(
+        archived, 9999, DateTime(2026, 7, 6), TransactionStatus.completed);
+    // Archive the second wallet.
+    final Wallet row = (await db.walletDao.getWalletById(archived))!;
+    await db.walletDao.updateWallet(row.copyWith(isArchived: true));
 
-    // Empty set → ALL wallets (the OPPOSITE of watchWalletsBalanceMinor).
-    final SummaryTotals all = await summary();
-    expect(all.incomeMinor, 5000);
-
-    // Non-empty set → only the named wallet.
-    final SummaryTotals onlyW1 = await summary(walletIds: <int>{w1});
-    expect(onlyW1.incomeMinor, 1000);
-
-    final SummaryTotals onlyW2 = await summary(walletIds: <int>{w2});
-    expect(onlyW2.incomeMinor, 4000);
-  });
-
-  test('excludes rows outside the period; boundaries are inclusive', () async {
-    final int account = await seedAccount();
-    final int wallet = await seedWallet(account);
-    // Just before the window.
-    await insertTxn(wallet,
-        type: TransactionType.income,
-        amountMinor: 9999,
-        baseAmountMinor: 9999,
-        valueDate: DateTime(2026, 6, 30));
-    // Exactly on start.
-    await insertTxn(wallet,
-        type: TransactionType.income,
-        amountMinor: 100,
-        baseAmountMinor: 100,
-        valueDate: DateTime(2026, 7, 1));
-    // Exactly on end.
-    await insertTxn(wallet,
-        type: TransactionType.expense,
-        amountMinor: 200,
-        baseAmountMinor: 200,
-        valueDate: DateTime(2026, 7, 31));
-    // Just after the window.
-    await insertTxn(wallet,
-        type: TransactionType.expense,
-        amountMinor: 8888,
-        baseAmountMinor: 8888,
-        valueDate: DateTime(2026, 8, 1));
-
-    final SummaryTotals totals = await summary();
-    expect(totals.incomeMinor, 100); // only the July-01 income
-    expect(totals.expenseMinor, 200); // only the July-31 expense
-  });
-
-  test('a multi-category transaction is counted once (no category join, F5)',
-      () async {
-    final int account = await seedAccount();
-    final int wallet = await seedWallet(account);
-    final int catA = await db.categoryDao.createCategory(
-      CategoriesCompanion.insert(
-        name: 'A',
-        type: CategoryType.expense,
-        colorValue: 0xFF222222,
-        iconCodePoint: 0xE100,
-      ),
-    );
-    final int catB = await db.categoryDao.createCategory(
-      CategoriesCompanion.insert(
-        name: 'B',
-        type: CategoryType.expense,
-        colorValue: 0xFF333333,
-        iconCodePoint: 0xE101,
-      ),
-    );
-    final int txn = await insertTxn(wallet,
-        type: TransactionType.expense,
-        amountMinor: 6000,
-        baseAmountMinor: 6000);
-    // Split across two categories: a JOIN-based sum would double it to 12000.
-    await db.transactionDao
-        .addCategory(txn, catA, allocatedAmountMinor: 2000);
-    await db.transactionDao
-        .addCategory(txn, catB, allocatedAmountMinor: 4000);
-
-    final SummaryTotals totals = await summary();
-    expect(totals.expenseMinor, 6000); // counted once, at transaction grain
-  });
-
-  test('re-emits when the ledger changes (reactive)', () async {
-    final int account = await seedAccount();
-    final int wallet = await seedWallet(account);
-
-    final Stream<SummaryTotals> stream = db.transactionDao
-        .watchSummaryTotals(range: july, walletIds: const <int>{});
-    final Future<List<SummaryTotals>> firstTwo = stream.take(2).toList();
-
-    // Give the initial emission a beat, then mutate the ledger.
-    await Future<void>.delayed(const Duration(milliseconds: 20));
-    await insertTxn(wallet,
-        type: TransactionType.income, amountMinor: 500, baseAmountMinor: 500);
-
-    final List<SummaryTotals> emissions = await firstTwo;
-    expect(emissions.first.incomeMinor, 0);
-    expect(emissions.last.incomeMinor, 500);
+    final SummaryData s = await summary(july);
+    expect(s.incomeTotalMinor, 1000); // archived wallet's 9999 excluded (A-3)
   });
 }

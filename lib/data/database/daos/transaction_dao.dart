@@ -11,16 +11,50 @@ import '../tables/wallets.dart';
 
 part 'transaction_dao.g.dart';
 
-/// DAO-level base-currency totals produced by [TransactionDao.watchSummaryTotals].
+/// DAO-level base-currency aggregates produced by
+/// [TransactionDao.watchSummaryBuckets] — the raw building blocks the repository
+/// assembles into the feature's `SummaryData`. A deliberately local value type
+/// (no feature imports) so the DAO stays free of the presentation layer. Every
+/// field is base-currency minor units.
 ///
-/// Deliberately a local value type (no feature imports) so the DAO stays free of
-/// the presentation layer; the repository maps this to the feature's
-/// `SummaryData`. Both fields are base-currency minor units and non-negative.
-class SummaryTotals {
-  const SummaryTotals({required this.incomeMinor, required this.expenseMinor});
+/// The four in-period buckets are unsigned totals (transfers excluded); the
+/// three `*Signed` fields are net running-balance flows (inflow + / outflow −)
+/// that DO include completed transfer legs (Decision 2A).
+class SummaryBuckets {
+  const SummaryBuckets({
+    required this.collectedIncomeMinor,
+    required this.receivableIncomeMinor,
+    required this.paidExpenseMinor,
+    required this.payableExpenseMinor,
+    required this.carriedNonTransferSignedMinor,
+    required this.carriedTransferSignedMinor,
+    required this.cashFlowSignedMinor,
+    required this.inPeriodTransferSignedMinor,
+  });
 
-  final int incomeMinor;
-  final int expenseMinor;
+  /// income + completed, valueDate in period (Tahsilat).
+  final int collectedIncomeMinor;
+
+  /// income + pending, valueDate in period (Alacak).
+  final int receivableIncomeMinor;
+
+  /// expense + completed, valueDate in period (Ödeme).
+  final int paidExpenseMinor;
+
+  /// expense + pending, valueDate in period (Borç).
+  final int payableExpenseMinor;
+
+  /// (income+expense) completed|pending, valueDate < start, signed by flow.
+  final int carriedNonTransferSignedMinor;
+
+  /// transfer completed, valueDate < start, signed by flow (Decision 2A).
+  final int carriedTransferSignedMinor;
+
+  /// all types completed, valueDate <= today, signed by flow (cash basis).
+  final int cashFlowSignedMinor;
+
+  /// transfer completed, valueDate in period, signed by flow (Decision 2A).
+  final int inPeriodTransferSignedMinor;
 }
 
 /// One category chip carried on a [TransactionListRowData]: enough to render a
@@ -185,63 +219,125 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
     ).map((QueryRow row) => row.read<int>('balance')).watchSingle();
   }
 
-  /// Reactive base-currency income/expense totals for the Summary scope
-  /// (PROJECT_PLAN §8.3 / §9). Sums the SNAPSHOTTED `base_amount_minor` — never
-  /// recomputes history from a live rate, and never sums `amount_minor` across
-  /// currencies. Only `completed`, non-`transfer` rows whose `value_date` falls
-  /// within [range] (inclusive on both ends) count.
+  /// Reactive base-currency aggregates for the Summary card (Summary Card
+  /// Refactor §A.4). Sums the SNAPSHOTTED `base_amount_minor` only — never
+  /// recomputes history (Flag A-2). Aggregates at the TRANSACTION grain (no
+  /// `transaction_categories` join), so a split transaction counts once (F5).
   ///
-  /// [walletIds] empty ⇒ ALL wallets (NO wallet predicate). ⚠️ This is the
-  /// OPPOSITE of [watchWalletsBalanceMinor], which returns 0 for an empty set —
-  /// only a `wallet_id IN (...)` clause is appended when the set is non-empty.
+  /// One conditional-aggregate query yields every bucket across three windows
+  /// (before-period / in-period / up-to-today). Period bounds and [today] are
+  /// bound as `'yyyy-MM-dd'` strings via [DateOnlyConverter.toSql] so the lexical
+  /// compare matches the stored `value_date` column (timezone-safe).
   ///
-  /// Aggregation is at the TRANSACTION grain: `transaction_categories` is never
-  /// joined, so a multi-category (split) transaction is counted exactly once.
+  /// [walletIds] must be the resolved, NON-EMPTY effective wallet set — the
+  /// repository handles the empty-selection-means-all and no-wallets-means-zero
+  /// cases before calling this (an empty `IN ()` is invalid SQL).
   ///
-  /// Enum filters bind the stored index (`.index`), and the period bounds are
-  /// built with [DateOnlyConverter.toSql] so the lexical text compare matches the
-  /// stored `value_date` column (same pattern as [watchTransactionRows]).
-  Stream<SummaryTotals> watchSummaryTotals({
-    required DateRange range,
+  /// The four in-period buckets exclude transfers (`type IN (income,expense)`).
+  /// The signed running-flow fields sign by `flow_direction` (inflow + /
+  /// outflow −) and include completed transfer legs per Decision 2A. Enum
+  /// filters bind the stored index (`.index`), never a literal.
+  Stream<SummaryBuckets> watchSummaryBuckets({
     required Set<int> walletIds,
+    required DateRange period,
+    required DateTime today,
   }) {
-    // ?1 income, ?2 expense (SELECT CASE); ?3 completed, ?4 transfer, ?5 start,
-    // ?6 end (WHERE); any wallet ids follow only when the set is non-empty.
+    assert(walletIds.isNotEmpty, 'resolve empty/zero cases before the query');
+    final int income = TransactionType.income.index;
+    final int expense = TransactionType.expense.index;
+    final int transfer = TransactionType.transfer.index;
+    final int completed = TransactionStatus.completed.index;
+    final int pending = TransactionStatus.pending.index;
+    final int inflow = FlowDirection.inflow.index;
+
+    final String start = _dateOnly.toSql(period.start);
+    final String end = _dateOnly.toSql(period.end);
+    final String todaySql = _dateOnly.toSql(today);
+
+    // A signed base amount: + on inflow, − on outflow. Reused across the running
+    // -balance columns. `flow_direction = $inflow` are inlined loop-invariant
+    // enum indices (not user input), so string interpolation here is safe.
+    final String signed =
+        'CASE WHEN flow_direction = $inflow '
+        'THEN base_amount_minor ELSE -base_amount_minor END';
+
+    final List<int> ids = walletIds.toList();
+    final String walletIn = 'wallet_id IN (${_placeholders(ids.length)})';
+
+    final String sql =
+        'SELECT '
+        // Row 3 in-period buckets (transfers excluded).
+        'COALESCE(SUM(CASE WHEN type = $income AND status = $completed '
+        '  AND value_date >= ? AND value_date <= ? '
+        '  THEN base_amount_minor ELSE 0 END), 0) AS collected, '
+        'COALESCE(SUM(CASE WHEN type = $income AND status = $pending '
+        '  AND value_date >= ? AND value_date <= ? '
+        '  THEN base_amount_minor ELSE 0 END), 0) AS receivable, '
+        'COALESCE(SUM(CASE WHEN type = $expense AND status = $completed '
+        '  AND value_date >= ? AND value_date <= ? '
+        '  THEN base_amount_minor ELSE 0 END), 0) AS paid, '
+        'COALESCE(SUM(CASE WHEN type = $expense AND status = $pending '
+        '  AND value_date >= ? AND value_date <= ? '
+        '  THEN base_amount_minor ELSE 0 END), 0) AS payable, '
+        // Devreden flow: non-transfer, completed|pending, before the period.
+        'COALESCE(SUM(CASE WHEN type IN ($income, $expense) '
+        '  AND status IN ($completed, $pending) AND value_date < ? '
+        '  THEN $signed ELSE 0 END), 0) AS carried_nontransfer, '
+        // Devreden flow: completed transfer legs before the period (Decision 2A).
+        'COALESCE(SUM(CASE WHEN type = $transfer AND status = $completed '
+        '  AND value_date < ? THEN $signed ELSE 0 END), 0) AS carried_transfer, '
+        // Bugünkü Kasa flow: all completed rows up to today (cash basis).
+        'COALESCE(SUM(CASE WHEN status = $completed AND value_date <= ? '
+        '  THEN $signed ELSE 0 END), 0) AS cash_flow, '
+        // Devredecek in-period completed transfer legs (Decision 2A).
+        'COALESCE(SUM(CASE WHEN type = $transfer AND status = $completed '
+        '  AND value_date >= ? AND value_date <= ? '
+        '  THEN $signed ELSE 0 END), 0) AS in_period_transfer '
+        'FROM transactions '
+        'WHERE $walletIn';
+
     final List<Variable> vars = <Variable>[
-      Variable.withInt(TransactionType.income.index),
-      Variable.withInt(TransactionType.expense.index),
-      Variable.withInt(TransactionStatus.completed.index),
-      Variable.withInt(TransactionType.transfer.index),
-      Variable.withString(_dateOnly.toSql(range.start)),
-      Variable.withString(_dateOnly.toSql(range.end)),
+      Variable.withString(start), Variable.withString(end), // collected
+      Variable.withString(start), Variable.withString(end), // receivable
+      Variable.withString(start), Variable.withString(end), // paid
+      Variable.withString(start), Variable.withString(end), // payable
+      Variable.withString(start), // carried_nontransfer
+      Variable.withString(start), // carried_transfer
+      Variable.withString(todaySql), // cash_flow
+      Variable.withString(start), Variable.withString(end), // in_period_transfer
+      ...ids.map(Variable.withInt), // wallet_id IN (...)
     ];
 
-    String walletClause = '';
-    if (walletIds.isNotEmpty) {
-      final List<int> ids = walletIds.toList();
-      walletClause = ' AND wallet_id IN (${_placeholders(ids.length)})';
-      vars.addAll(ids.map(Variable.withInt));
-    }
-
     return customSelect(
-      'SELECT '
-      'COALESCE(SUM(CASE WHEN type = ? THEN base_amount_minor ELSE 0 END), 0) '
-      '  AS income_minor, '
-      'COALESCE(SUM(CASE WHEN type = ? THEN base_amount_minor ELSE 0 END), 0) '
-      '  AS expense_minor '
-      'FROM transactions '
-      'WHERE status = ? AND type <> ? '
-      'AND value_date >= ? AND value_date <= ?'
-      '$walletClause',
+      sql,
       variables: vars,
       readsFrom: <ResultSetImplementation<dynamic, dynamic>>{transactions},
     ).map(
-      (QueryRow row) => SummaryTotals(
-        incomeMinor: row.read<int>('income_minor'),
-        expenseMinor: row.read<int>('expense_minor'),
+      (QueryRow row) => SummaryBuckets(
+        collectedIncomeMinor: row.read<int>('collected'),
+        receivableIncomeMinor: row.read<int>('receivable'),
+        paidExpenseMinor: row.read<int>('paid'),
+        payableExpenseMinor: row.read<int>('payable'),
+        carriedNonTransferSignedMinor: row.read<int>('carried_nontransfer'),
+        carriedTransferSignedMinor: row.read<int>('carried_transfer'),
+        cashFlowSignedMinor: row.read<int>('cash_flow'),
+        inPeriodTransferSignedMinor: row.read<int>('in_period_transfer'),
       ),
     ).watchSingle();
   }
+
+  /// Both legs of the transfer identified by [transferGroupId] (0 or 2 rows).
+  Future<List<Transaction>> getTransferLegs(String transferGroupId) =>
+      (select(transactions)
+            ..where((t) => t.transferGroupId.equals(transferGroupId)))
+          .get();
+
+  /// Deletes BOTH legs of a transfer atomically-per-call (one WHERE over the
+  /// group). Callers already wrap create/edit/delete in `db.transaction`.
+  Future<int> deleteTransferGroup(String transferGroupId) =>
+      (delete(transactions)
+            ..where((t) => t.transferGroupId.equals(transferGroupId)))
+          .go();
 
   Future<bool> updateTransaction(Transaction entry) =>
       update(transactions).replace(entry);
@@ -387,6 +483,12 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
       't.recurring_rule_id AS recurring_rule_id, '
       't.transfer_group_id AS transfer_group_id, '
       'w.name AS wallet_name, '
+      // The other leg's wallet name (Phase 8): the row in the same transfer
+      // group with a different id. Null for non-transfer rows.
+      '(SELECT w2.name FROM transactions t2 '
+      '  JOIN wallets w2 ON w2.id = t2.wallet_id '
+      '  WHERE t2.transfer_group_id = t.transfer_group_id '
+      '  AND t2.id <> t.id LIMIT 1) AS counter_wallet_name, '
       '(SELECT group_concat(chip, char(30)) FROM ('
       '  SELECT (c.id || char(31) || c.color_value || char(31) || c.name) '
       '    AS chip '
@@ -434,8 +536,8 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
       settledAmountMinor: row.read<int?>('settled_amount_minor'),
       isPendingParent: status == TransactionStatus.pending && planned != null,
       isRecurring: row.read<int?>('recurring_rule_id') != null,
-      // The transfer counter-wallet is resolved by TransferService (Phase 8).
-      counterWalletName: null,
+      // The other transfer leg's wallet name (null for non-transfer rows).
+      counterWalletName: row.read<String?>('counter_wallet_name'),
     );
   }
 

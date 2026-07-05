@@ -75,4 +75,10 @@ abstract class UndoableAction {
   /// The real write. Runs INSIDE `appDatabase.transaction(...)` supplied by
   /// `UndoService`, so implementations just perform their DAO calls.
   Future<void> commit(AppDatabase db);
+
+  /// Whether this action affects the row identified by [ref]. Defaults to the
+  /// single [target]; a multi-entity action (e.g. a transfer that deletes BOTH
+  /// legs) overrides this so the overlay hides EVERY affected row, not just the
+  /// primary target.
+  bool affects(EntityRef ref) => ref == target;
 }
