@@ -446,4 +446,89 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get transferNeedsTwoWallets =>
       'Transfer için en az iki cüzdan gerekir.';
+
+  @override
+  String get billsTitle => 'Borçlar & Alacaklar';
+
+  @override
+  String get billsSectionDebts => 'Borçlar';
+
+  @override
+  String get billsSectionReceivables => 'Alacaklar';
+
+  @override
+  String get billsEmpty => 'Bekleyen borç veya alacak yok.';
+
+  @override
+  String get billAdd => 'Fatura/Alacak ekle';
+
+  @override
+  String get billModeLabel => 'Bekleyen fatura/alacak';
+
+  @override
+  String get billModeHint =>
+      'Şimdi para hareketi olmaz; sonra kısmi ödemeler eklenir.';
+
+  @override
+  String get billPlannedLabel => 'Planlanan tutar';
+
+  @override
+  String billRemaining(String amount) {
+    return 'Kalan $amount';
+  }
+
+  @override
+  String billProgress(String settled, String planned) {
+    return '$settled / $planned';
+  }
+
+  @override
+  String get billDetailTitle => 'Fatura ayrıntısı';
+
+  @override
+  String get billDeleted => 'Fatura silindi';
+
+  @override
+  String get billDeleteTitle => 'Faturayı sil';
+
+  @override
+  String get billDeleteMessage =>
+      'Bu fatura ve tüm ödemeleri silinecek. Devam edilsin mi?';
+
+  @override
+  String get paymentAdd => 'Ödeme ekle';
+
+  @override
+  String get paymentHistoryTitle => 'Ödeme geçmişi';
+
+  @override
+  String get paymentHistoryEmpty => 'Henüz ödeme yok.';
+
+  @override
+  String get paymentSourceWalletLabel => 'Kaynak cüzdan';
+
+  @override
+  String get paymentAmountLabel => 'Ödeme tutarı';
+
+  @override
+  String paymentRateToParentLabel(String from, String to) {
+    return 'Kur ($from → $to)';
+  }
+
+  @override
+  String get paymentReversed => 'Ödeme geri alındı';
+
+  @override
+  String get overpaymentTitle => 'Kalan tutarı aşıyor';
+
+  @override
+  String overpaymentMessage(String attempted, String remaining) {
+    return 'Ödeme $attempted, kalan $remaining. Ne yapmak istersiniz?';
+  }
+
+  @override
+  String get overpaymentCap => 'Kalanla sınırla';
+
+  @override
+  String get overpaymentAllow => 'Fazla ödemeye izin ver';
 }

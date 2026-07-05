@@ -8,14 +8,15 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../transactions/application/summary_providers.dart';
 import '../../transactions/services/summary_data.dart';
 
-/// The dashboard 9-cell Summary card (Summary Card Refactor §A.6). Watches
+/// The dashboard 9-cell Summary card (Summary Card Refactor §A). Watches
 /// [summaryProvider] and hands the resolved [SummaryData] to a pure
 /// presentational body — leaf cells read no providers, so it repaints cheaply.
 ///
 /// All figures are base-currency, formatted with [CurrencyService.format] under
 /// [SummaryData.baseCurrencyCode] (tr_TR grouping, signed). Row-1 balances are
-/// running totals; Row-2 are period flows; Row-3 breaks income/expense into
-/// collected/receivable and payable/paid. Dark-theme surfaces only.
+/// running totals; Row-2 are period flows; Row-3 is a single centered line of
+/// the four collected/receivable/paid/payable breakdown items that shrinks to
+/// fit narrow screens. Dark-theme surfaces only.
 class SummaryCard extends ConsumerWidget {
   const SummaryCard({super.key});
 
@@ -29,7 +30,11 @@ class SummaryCard extends ConsumerWidget {
       child: Card(
         margin: EdgeInsets.zero,
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          // Tightened vertical rhythm keeps the card compact (§A.2).
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
           child: summary.when(
             loading: () => const _SummarySkeleton(),
             error: (Object _, StackTrace _) => SizedBox(
@@ -47,7 +52,7 @@ class SummaryCard extends ConsumerWidget {
   }
 }
 
-const double _kCardBodyHeight = 132;
+const double _kCardBodyHeight = 104;
 
 /// Pure, provider-free body rendering the three rows of cells. Exposed
 /// (non-private) so widget/golden tests can pump it with a fixed [SummaryData].
@@ -105,7 +110,12 @@ class SummaryCardBody extends StatelessWidget {
             ),
           ],
         ),
-        const Divider(height: AppSpacing.xl),
+        // A thin hairline replaces the tall Divider to save height (§A.2).
+        Divider(
+          height: AppSpacing.md,
+          thickness: 0.5,
+          color: theme.dividerColor.withValues(alpha: 0.4),
+        ),
         // Row 2 — period flows.
         Row(
           children: <Widget>[
@@ -137,34 +147,31 @@ class SummaryCardBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
-        // Row 3 — breakdown under Gelir / Gider (spacer under Bakiye).
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _BreakdownStack(
-                entries: <_BreakdownEntry>[
-                  _BreakdownEntry(l10n.summaryCollected,
-                      _fmt(data.collectedIncomeMinor), semantic.income),
-                  _BreakdownEntry(l10n.summaryReceivable,
-                      _fmt(data.receivableIncomeMinor), semantic.income),
-                ],
-                semantic: semantic,
-              ),
+        // Row 3 — the four breakdown items on ONE centered line that scales
+        // down (never wraps/overflows) on narrow screens (§A.2).
+        _BreakdownLine(
+          semantic: semantic,
+          entries: <_BreakdownEntry>[
+            _BreakdownEntry(
+              l10n.summaryCollected,
+              _fmt(data.collectedIncomeMinor),
+              semantic.income,
             ),
-            Expanded(
-              child: _BreakdownStack(
-                entries: <_BreakdownEntry>[
-                  _BreakdownEntry(l10n.summaryPayable,
-                      _fmt(data.payableExpenseMinor), semantic.expense),
-                  _BreakdownEntry(l10n.summaryPaid,
-                      _fmt(data.paidExpenseMinor), semantic.expense),
-                ],
-                semantic: semantic,
-              ),
+            _BreakdownEntry(
+              l10n.summaryReceivable,
+              _fmt(data.receivableIncomeMinor),
+              semantic.income,
             ),
-            // Spacer under Bakiye keeps the three columns aligned.
-            const Expanded(child: SizedBox.shrink()),
+            _BreakdownEntry(
+              l10n.summaryPaid,
+              _fmt(data.paidExpenseMinor),
+              semantic.expense,
+            ),
+            _BreakdownEntry(
+              l10n.summaryPayable,
+              _fmt(data.payableExpenseMinor),
+              semantic.expense,
+            ),
           ],
         ),
       ],
@@ -196,14 +203,13 @@ class _BalanceCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final CrossAxisAlignment cross =
-        hero ? CrossAxisAlignment.center : (alignEnd
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start);
+    final CrossAxisAlignment cross = hero
+        ? CrossAxisAlignment.center
+        : (alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start);
     final TextAlign textAlign =
         hero ? TextAlign.center : (alignEnd ? TextAlign.end : TextAlign.start);
     final TextStyle? valueStyle = hero
-        ? theme.textTheme.titleLarge?.copyWith(
+        ? theme.textTheme.titleMedium?.copyWith(
             color: color,
             fontWeight: FontWeight.w800,
           )
@@ -289,8 +295,11 @@ class _BreakdownEntry {
   final Color color;
 }
 
-class _BreakdownStack extends StatelessWidget {
-  const _BreakdownStack({required this.entries, required this.semantic});
+/// Row 3: all four breakdown items on a single, centered line separated by a
+/// muted middot. Wrapped in a scale-down [FittedBox] so it stays on one line and
+/// shrinks (never wraps or overflows) on a narrow screen (§A.2).
+class _BreakdownLine extends StatelessWidget {
+  const _BreakdownLine({required this.entries, required this.semantic});
 
   final List<_BreakdownEntry> entries;
   final AppSemanticColors semantic;
@@ -298,36 +307,37 @@ class _BreakdownStack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (final _BreakdownEntry e in entries)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 2),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    e.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: semantic.textMuted,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  e.value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: e.color),
-                ),
-              ],
+    final TextStyle? labelStyle =
+        theme.textTheme.labelSmall?.copyWith(color: semantic.textMuted);
+    final Widget separator = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Text('·', style: labelStyle),
+    );
+
+    final List<Widget> children = <Widget>[];
+    for (int i = 0; i < entries.length; i++) {
+      if (i > 0) {
+        children.add(separator);
+      }
+      final _BreakdownEntry e = entries[i];
+      children
+        ..add(Text(e.label, style: labelStyle))
+        ..add(const SizedBox(width: AppSpacing.xs))
+        ..add(
+          Text(
+            e.value,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: e.color,
+              fontWeight: FontWeight.w600,
             ),
           ),
-      ],
+        );
+    }
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.center,
+      child: Row(mainAxisSize: MainAxisSize.min, children: children),
     );
   }
 }

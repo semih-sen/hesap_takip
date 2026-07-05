@@ -167,16 +167,19 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Only `completed` rows count (pending/scheduled/cancelled are excluded, so
   /// pending parent bills never move a balance). Transfers DO count — each leg
-  /// carries an inflow/outflow. Enum filters bind the stored index (`.index`),
-  /// so this is not fragile to hardcoded literals. `?1` is reused for the
-  /// wallet id in both the sub-select and the WHERE.
+  /// carries an inflow/outflow. Bill-PARENTS are excluded even when completed
+  /// (`planned_amount_minor IS NULL`, Flag B-4) so a fully-settled parent is
+  /// never counted on top of its children. Enum filters bind the stored index
+  /// (`.index`), so this is not fragile to hardcoded literals. `?1` is reused
+  /// for the wallet id in both the sub-select and the WHERE.
   Stream<int> watchWalletBalanceMinor(int walletId) {
     return customSelect(
       'SELECT COALESCE((SELECT initial_balance_minor FROM wallets '
       'WHERE id = ?1), 0) + '
       'COALESCE(SUM(CASE WHEN flow_direction = ?2 '
       'THEN amount_minor ELSE -amount_minor END), 0) AS balance '
-      'FROM transactions WHERE wallet_id = ?1 AND status = ?3',
+      'FROM transactions WHERE wallet_id = ?1 AND status = ?3 '
+      'AND planned_amount_minor IS NULL',
       variables: <Variable>[
         Variable.withInt(walletId),
         Variable.withInt(FlowDirection.inflow.index),
@@ -210,7 +213,8 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
       'WHERE id IN ($placeholders)), 0) + '
       'COALESCE(SUM(CASE WHEN flow_direction = ? '
       'THEN amount_minor ELSE -amount_minor END), 0) AS balance '
-      'FROM transactions WHERE status = ? AND wallet_id IN ($placeholders)',
+      'FROM transactions WHERE status = ? AND wallet_id IN ($placeholders) '
+      'AND planned_amount_minor IS NULL',
       variables: variables,
       readsFrom: <ResultSetImplementation<dynamic, dynamic>>{
         transactions,
@@ -264,31 +268,37 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
     final List<int> ids = walletIds.toList();
     final String walletIn = 'wallet_id IN (${_placeholders(ids.length)})';
 
+    // Bill-PARENTS (`planned_amount_minor IS NOT NULL`) are excluded from EVERY
+    // bucket here (Flag B-1/B-4/B-5): completed parents would double-count their
+    // children, and pending parents' remaining is folded in later, in Dart, via
+    // CurrencyService (the base conversion needs decimal math SQL can't do). So
+    // this query covers only normal transactions, children, and transfer legs.
+    const String notParent = 'planned_amount_minor IS NULL';
     final String sql =
         'SELECT '
         // Row 3 in-period buckets (transfers excluded).
         'COALESCE(SUM(CASE WHEN type = $income AND status = $completed '
-        '  AND value_date >= ? AND value_date <= ? '
+        '  AND value_date >= ? AND value_date <= ? AND $notParent '
         '  THEN base_amount_minor ELSE 0 END), 0) AS collected, '
         'COALESCE(SUM(CASE WHEN type = $income AND status = $pending '
-        '  AND value_date >= ? AND value_date <= ? '
+        '  AND value_date >= ? AND value_date <= ? AND $notParent '
         '  THEN base_amount_minor ELSE 0 END), 0) AS receivable, '
         'COALESCE(SUM(CASE WHEN type = $expense AND status = $completed '
-        '  AND value_date >= ? AND value_date <= ? '
+        '  AND value_date >= ? AND value_date <= ? AND $notParent '
         '  THEN base_amount_minor ELSE 0 END), 0) AS paid, '
         'COALESCE(SUM(CASE WHEN type = $expense AND status = $pending '
-        '  AND value_date >= ? AND value_date <= ? '
+        '  AND value_date >= ? AND value_date <= ? AND $notParent '
         '  THEN base_amount_minor ELSE 0 END), 0) AS payable, '
         // Devreden flow: non-transfer, completed|pending, before the period.
         'COALESCE(SUM(CASE WHEN type IN ($income, $expense) '
-        '  AND status IN ($completed, $pending) AND value_date < ? '
+        '  AND status IN ($completed, $pending) AND value_date < ? AND $notParent '
         '  THEN $signed ELSE 0 END), 0) AS carried_nontransfer, '
         // Devreden flow: completed transfer legs before the period (Decision 2A).
         'COALESCE(SUM(CASE WHEN type = $transfer AND status = $completed '
         '  AND value_date < ? THEN $signed ELSE 0 END), 0) AS carried_transfer, '
         // Bugünkü Kasa flow: all completed rows up to today (cash basis).
         'COALESCE(SUM(CASE WHEN status = $completed AND value_date <= ? '
-        '  THEN $signed ELSE 0 END), 0) AS cash_flow, '
+        '  AND $notParent THEN $signed ELSE 0 END), 0) AS cash_flow, '
         // Devredecek in-period completed transfer legs (Decision 2A).
         'COALESCE(SUM(CASE WHEN type = $transfer AND status = $completed '
         '  AND value_date >= ? AND value_date <= ? '
@@ -324,6 +334,80 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
         inPeriodTransferSignedMinor: row.read<int>('in_period_transfer'),
       ),
     ).watchSingle();
+  }
+
+  // ---- Partial payments (Phase 9) ----
+
+  /// Every child payment row linked to the parent bill [parentId], oldest-first
+  /// (by value date, then id) so payment history reads chronologically.
+  Future<List<Transaction>> getChildren(int parentId) =>
+      (select(transactions)
+            ..where((t) => t.parentTransactionId.equals(parentId))
+            ..orderBy(<OrderingTerm Function($TransactionsTable)>[
+              (t) => OrderingTerm(expression: t.valueDate),
+              (t) => OrderingTerm(expression: t.id),
+            ]))
+          .get();
+
+  /// Number of child payments linked to the parent bill [parentId].
+  Future<int> countChildren(int parentId) async {
+    final Expression<int> total = countAll(
+      filter: transactions.parentTransactionId.equals(parentId),
+    );
+    final Selectable<int> query = (selectOnly(
+      transactions,
+    )..addColumns(<Expression<Object>>[total])).map((row) => row.read(total)!);
+    return query.getSingle();
+  }
+
+  /// Hard-deletes every child payment of the parent bill [parentId]. Callers
+  /// wrap this together with the parent delete in one `db.transaction`.
+  Future<int> deleteChildrenOf(int parentId) => (delete(
+    transactions,
+  )..where((t) => t.parentTransactionId.equals(parentId))).go();
+
+  /// Reactive stream of ALL bill-parents (`planned_amount_minor IS NOT NULL`)
+  /// newest-first — the pending bills & receivables screen filters/splits them.
+  Stream<List<Transaction>> watchBillParents() =>
+      (select(transactions)
+            ..where((t) => t.plannedAmountMinor.isNotNull())
+            ..orderBy(<OrderingTerm Function($TransactionsTable)>[
+              (t) => OrderingTerm(
+                expression: t.valueDate,
+                mode: OrderingMode.desc,
+              ),
+              (t) => OrderingTerm(expression: t.id, mode: OrderingMode.desc),
+            ]))
+          .watch();
+
+  /// Reactive stream of the child payments for the bill [parentId], oldest-first
+  /// (payment-history order).
+  Stream<List<Transaction>> watchChildren(int parentId) =>
+      (select(transactions)
+            ..where((t) => t.parentTransactionId.equals(parentId))
+            ..orderBy(<OrderingTerm Function($TransactionsTable)>[
+              (t) => OrderingTerm(expression: t.valueDate),
+              (t) => OrderingTerm(expression: t.id),
+            ]))
+          .watch();
+
+  /// PENDING bill-parents (`planned_amount_minor IS NOT NULL`, `status=pending`)
+  /// within [walletIds]. The summary repository folds each one's remaining, in
+  /// base currency, into the Alacak/Borç/Devreden figures — the base conversion
+  /// needs decimal math the aggregate SQL can't do (Flag B-5). Typically few.
+  Future<List<Transaction>> getPendingBillParents(Set<int> walletIds) async {
+    if (walletIds.isEmpty) {
+      return const <Transaction>[];
+    }
+    final List<Transaction> rows =
+        await (select(transactions)..where(
+          (t) =>
+              t.walletId.isIn(walletIds.toList()) &
+              t.plannedAmountMinor.isNotNull(),
+        )).get();
+    return rows
+        .where((Transaction t) => t.status == TransactionStatus.pending)
+        .toList(growable: false);
   }
 
   /// Both legs of the transfer identified by [transferGroupId] (0 or 2 rows).

@@ -7,6 +7,7 @@ import '../../core/currency/split_allocation.dart';
 import '../../core/date/date_range.dart';
 import '../../features/transactions/services/summary_data.dart';
 import '../database/app_database.dart' as db;
+import '../database/tables/enums.dart';
 import '../database/app_database_provider.dart';
 import '../database/daos/transaction_dao.dart';
 import '../models/mappers/transaction_mapper.dart';
@@ -165,29 +166,88 @@ class DriftTransactionRepository implements TransactionRepository {
       for (final db.Wallet w in effective) w.id,
     };
 
+    // The aggregate SQL covers only non-parent rows (children/normal/transfers).
+    // Each emission re-reads the pending bill-parents and folds their remaining
+    // (converted to base in Dart) into Alacak/Borç/Devreden — kept reactive
+    // because the aggregate re-emits on any `transactions` change (Flag B-5).
     yield* _db.transactionDao
         .watchSummaryBuckets(
           walletIds: effectiveIds,
           period: period,
           today: today,
         )
-        .map(
-          (SummaryBuckets b) => _assemble(b, initialBaseMinor, base),
-        );
+        .asyncMap((SummaryBuckets b) async {
+          final List<db.Transaction> parents = await _db.transactionDao
+              .getPendingBillParents(effectiveIds);
+          final _ParentDeltas d = _foldPendingParents(parents, base, period);
+          return _assemble(b, initialBaseMinor, base, d);
+        });
   }
 
-  /// Assembles the DAO buckets + converted initial balance into the 9-cell
-  /// [SummaryData] (Summary Card Refactor §A.4).
+  /// Folds each pending bill-parent's REMAINING (planned − settled, in the
+  /// parent's currency) into base-currency deltas for Alacak (receivable), Borç
+  /// (payable) and Devreden (carried) per B.5. Completed parents and settled
+  /// parents contribute nothing; children already carry the settled money.
+  static _ParentDeltas _foldPendingParents(
+    List<db.Transaction> parents,
+    String base,
+    DateRange period,
+  ) {
+    int receivable = 0;
+    int payable = 0;
+    int carried = 0;
+    for (final db.Transaction p in parents) {
+      final int remainingRow =
+          (p.plannedAmountMinor ?? 0) - (p.settledAmountMinor ?? 0);
+      if (remainingRow <= 0) {
+        continue;
+      }
+      final int remainingBase = p.currencyCode == base
+          ? remainingRow
+          : _currency.convertMinor(
+              amountMinor: remainingRow,
+              fromCode: p.currencyCode,
+              toCode: base,
+              rate: p.exchangeRateToBase,
+            );
+      final bool isIncome = p.type == TransactionType.income;
+      final bool inPeriod =
+          !p.valueDate.isBefore(period.start) &&
+          !p.valueDate.isAfter(period.end);
+      if (inPeriod) {
+        if (isIncome) {
+          receivable += remainingBase;
+        } else {
+          payable += remainingBase;
+        }
+      }
+      if (p.valueDate.isBefore(period.start)) {
+        carried += isIncome ? remainingBase : -remainingBase;
+      }
+    }
+    return _ParentDeltas(
+      receivable: receivable,
+      payable: payable,
+      carriedNonTransfer: carried,
+    );
+  }
+
+  /// Assembles the DAO buckets + converted initial balance + pending-parent
+  /// deltas into the 9-cell [SummaryData] (Summary Card Refactor §A.4 / B.5).
   static SummaryData _assemble(
     SummaryBuckets b,
     int initialBaseMinor,
     String base,
+    _ParentDeltas d,
   ) {
-    final int incomeTotal = b.collectedIncomeMinor + b.receivableIncomeMinor;
-    final int expenseTotal = b.paidExpenseMinor + b.payableExpenseMinor;
+    final int receivable = b.receivableIncomeMinor + d.receivable;
+    final int payable = b.payableExpenseMinor + d.payable;
+    final int incomeTotal = b.collectedIncomeMinor + receivable;
+    final int expenseTotal = b.paidExpenseMinor + payable;
     final int netBalance = incomeTotal - expenseTotal;
     final int carriedOver = initialBaseMinor +
         b.carriedNonTransferSignedMinor +
+        d.carriedNonTransfer +
         b.carriedTransferSignedMinor;
     // Devredecek = Devreden + period net + in-period completed transfer legs, so
     // Devredecek(N) == Devreden(N+1) for contiguous periods (transfers are not
@@ -205,9 +265,9 @@ class DriftTransactionRepository implements TransactionRepository {
       expenseTotalMinor: expenseTotal,
       netBalanceMinor: netBalance,
       collectedIncomeMinor: b.collectedIncomeMinor,
-      receivableIncomeMinor: b.receivableIncomeMinor,
+      receivableIncomeMinor: receivable,
       paidExpenseMinor: b.paidExpenseMinor,
-      payableExpenseMinor: b.payableExpenseMinor,
+      payableExpenseMinor: payable,
     );
   }
 
@@ -323,6 +383,26 @@ class DriftTransactionRepository implements TransactionRepository {
         ),
     ];
   }
+}
+
+/// Base-currency deltas contributed by the pending bill-parents in scope,
+/// folded into the summary buckets in Dart (B.5).
+class _ParentDeltas {
+  const _ParentDeltas({
+    required this.receivable,
+    required this.payable,
+    required this.carriedNonTransfer,
+  });
+
+  /// Added to Alacak (pending income remaining, in period).
+  final int receivable;
+
+  /// Added to Borç (pending expense remaining, in period).
+  final int payable;
+
+  /// Signed remaining of pending parents dated before the period, added to
+  /// Devreden (income +, expense −).
+  final int carriedNonTransfer;
 }
 
 /// App-lifetime singleton transaction repository.

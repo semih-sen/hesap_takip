@@ -31,6 +31,7 @@ abstract class Transaction with _$Transaction {
     int? parentTransactionId,
     int? plannedAmountMinor,
     int? settledAmountMinor,
+    int? settledContribMinor,
     int? recurringRuleId,
     String? transferGroupId,
     required DateTime createdAt,

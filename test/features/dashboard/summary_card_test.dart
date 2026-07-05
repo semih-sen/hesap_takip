@@ -28,15 +28,27 @@ void main() {
     payableExpenseMinor: 8000, // Borç
   );
 
-  Future<void> pumpBody(WidgetTester tester) async {
+  Future<void> pumpBody(WidgetTester tester, {double width = 360}) async {
     await tester.pumpWidget(
       MaterialApp(
+        debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         locale: const Locale('tr'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const Scaffold(
-          body: SummaryCardBody(data: data, currency: currency),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: width,
+              child: const Card(
+                margin: EdgeInsets.zero,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: SummaryCardBody(data: data, currency: currency),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -100,5 +112,42 @@ void main() {
     // Hero Bugünkü Kasa → primary.
     expect(colorOf(tester, currency.format(151500, 'TRY')),
         theme.colorScheme.primary);
+  });
+
+  testWidgets('Row 3 renders all four items on one line, no overflow at 360dp', (
+    tester,
+  ) async {
+    await pumpBody(tester);
+    // The four breakdown labels co-exist on the single centered line.
+    for (final String label in <String>[
+      'Tahsilat',
+      'Alacak',
+      'Ödeme',
+      'Borç',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    // Three middot separators between the four items.
+    expect(find.text('·'), findsNWidgets(3));
+    // No render overflow was recorded while laying the card out.
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('default-width layout golden', (tester) async {
+    await pumpBody(tester, width: 360);
+    await expectLater(
+      find.byType(SummaryCardBody),
+      matchesGoldenFile('goldens/summary_card_default.png'),
+    );
+  });
+
+  testWidgets('narrow-width (320dp) scale-down golden', (tester) async {
+    await pumpBody(tester, width: 320);
+    // FittedBox keeps Row 3 to one line even at 320dp — no overflow.
+    expect(tester.takeException(), isNull);
+    await expectLater(
+      find.byType(SummaryCardBody),
+      matchesGoldenFile('goldens/summary_card_narrow.png'),
+    );
   });
 }

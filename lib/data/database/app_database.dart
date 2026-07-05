@@ -23,7 +23,12 @@ import 'tables/wallets.dart';
 
 part 'app_database.g.dart';
 
-/// The application's Drift database (schema version 1, PROJECT_PLAN §5).
+/// The application's Drift database (PROJECT_PLAN §5).
+///
+/// Schema history:
+/// - v1: initial schema.
+/// - v2 (Phase 9): adds the nullable `Transactions.settledContribMinor` column
+///   (a partial-payment child's contribution in its parent's currency).
 @DriftDatabase(
   tables: [
     Accounts,
@@ -54,7 +59,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -62,6 +67,13 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
       await _createRecurringGuardIndex();
       await _seedDefaults();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      // v1 → v2: add the nullable child-contribution column. Additive only, so
+      // existing rows keep NULL and no data is lost (Flag B-5).
+      if (from < 2) {
+        await m.addColumn(transactions, transactions.settledContribMinor);
+      }
     },
     beforeOpen: (OpeningDetails details) async {
       // MANDATORY: SQLite ignores every foreign key (and therefore

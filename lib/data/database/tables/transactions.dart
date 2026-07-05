@@ -42,6 +42,10 @@ class Transactions extends Table {
   IntColumn get plannedAmountMinor => integer().nullable()(); // parents only
   IntColumn get settledAmountMinor =>
       integer().nullable().withDefault(const Constant(0))(); // parents, cached
+  // Children only (Phase 9): this child's contribution measured in the PARENT's
+  // currency (minor units), so reversePayment/recomputeSettled are exact and
+  // cross-currency safe without re-rounding from stored rates.
+  IntColumn get settledContribMinor => integer().nullable()();
 
   // Recurring + transfer linkage.
   IntColumn get recurringRuleId =>

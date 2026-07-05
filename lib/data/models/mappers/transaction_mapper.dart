@@ -25,6 +25,7 @@ extension TransactionRowMapper on db.Transaction {
     parentTransactionId: parentTransactionId,
     plannedAmountMinor: plannedAmountMinor,
     settledAmountMinor: settledAmountMinor,
+    settledContribMinor: settledContribMinor,
     recurringRuleId: recurringRuleId,
     transferGroupId: transferGroupId,
     createdAt: createdAt,
@@ -49,6 +50,7 @@ extension TransactionDomainMapper on Transaction {
     parentTransactionId: parentTransactionId,
     plannedAmountMinor: plannedAmountMinor,
     settledAmountMinor: settledAmountMinor,
+    settledContribMinor: settledContribMinor,
     recurringRuleId: recurringRuleId,
     transferGroupId: transferGroupId,
     createdAt: createdAt,
@@ -75,6 +77,7 @@ extension TransactionDomainMapper on Transaction {
         settledAmountMinor: settledAmountMinor == null
             ? const Value.absent()
             : Value(settledAmountMinor!),
+        settledContribMinor: Value(settledContribMinor),
         recurringRuleId: Value(recurringRuleId),
         transferGroupId: Value(transferGroupId),
       );

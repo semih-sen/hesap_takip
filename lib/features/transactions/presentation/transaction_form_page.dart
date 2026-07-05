@@ -21,6 +21,7 @@ import '../../accounts/application/accounts_providers.dart';
 import '../../categories/application/categories_providers.dart';
 import '../../shared/entity_labels.dart';
 import '../../wallets/application/wallets_providers.dart';
+import '../services/partial_payment_service.dart';
 import 'transaction_form_theme.dart';
 
 /// Create/edit an income or expense transaction (PROJECT_PLAN §5.2–§5.3).
@@ -33,9 +34,19 @@ import 'transaction_form_theme.dart';
 /// `createTransactionWithCategories` / `updateTransactionWithCategories` in one
 /// atomic DB transaction. Only DELETE is routed through the undo queue.
 class TransactionFormPage extends ConsumerStatefulWidget {
-  const TransactionFormPage({super.key, this.transactionId});
+  const TransactionFormPage({
+    super.key,
+    this.transactionId,
+    this.billMode = false,
+  });
 
   final int? transactionId;
+
+  /// When true the form CREATES a pending bill/receivable (Phase 9 §B.6.4): the
+  /// amount is the planned total, no money moves yet, and [PartialPaymentService.
+  /// createBill] is called instead of a normal completed transaction. Only valid
+  /// for creation (not edit); splits and the rate field are hidden.
+  final bool billMode;
 
   @override
   ConsumerState<TransactionFormPage> createState() =>
@@ -224,6 +235,10 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (wallet == null) {
       return;
     }
+    if (widget.billMode) {
+      await _saveBill(wallet);
+      return;
+    }
     final AppLocalizations l10n = AppLocalizations.of(context);
     setState(() => _saving = true);
 
@@ -295,6 +310,39 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     Navigator.of(context).pop();
   }
 
+  /// Creates a pending bill/receivable via [PartialPaymentService.createBill]
+  /// (bill mode). Categories are whole-transaction on the parent (no split); the
+  /// base snapshot is taken from the rate cache inside the service.
+  Future<void> _saveBill(Wallet wallet) async {
+    setState(() => _saving = true);
+    final int plannedMinor = _currency.toMinor(
+      parseTurkishAmount(_amountController.text) ?? Decimal.zero,
+      wallet.currencyCode,
+    );
+    try {
+      await ref
+          .read(partialPaymentServiceProvider)
+          .createBill(
+            walletId: wallet.id,
+            type: _type,
+            plannedAmountMinor: plannedMinor,
+            valueDate: _valueDate,
+            categoryIds: List<int>.of(_categoryIds),
+            payee: _emptyToNull(_payeeController.text),
+            note: _emptyToNull(_noteController.text),
+          );
+    } on PaymentValidationException {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
   /// Builds the category links. When split is enabled each selected category
   /// carries a parsed allocation (the repository reconciles them to the total,
   /// last absorbs the remainder); otherwise links are whole-transaction (null).
@@ -326,6 +374,15 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     return trimmed.isEmpty ? null : trimmed;
   }
 
+  /// The amount field label: "Planlanan tutar" in bill mode, else "Tutar",
+  /// suffixed with the wallet currency once one is picked.
+  String _amountLabel(AppLocalizations l10n, String? currencyCode) {
+    final String base = widget.billMode
+        ? l10n.billPlannedLabel
+        : l10n.transactionAmountLabel;
+    return currencyCode == null ? base : '$base ($currencyCode)';
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -343,7 +400,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       curve: Curves.easeOut,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_isEdit ? l10n.transactionEdit : l10n.transactionAdd),
+          title: Text(
+            _isEdit
+                ? l10n.transactionEdit
+                : (widget.billMode ? l10n.billAdd : l10n.transactionAdd),
+          ),
         ),
         // A very faint top-down accent wash behind the body adds subtle depth
         // without ever reading as a colored (non-dark) page (alpha ≤ 0.06).
@@ -420,6 +481,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             onSelectionChanged: (Set<TransactionType> s) =>
                 _onTypeChanged(s.first),
           ),
+          if (widget.billMode) ...<Widget>[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.billModeHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: AppSpacing.lg),
           // ----- Wallet -----
           DropdownButtonFormField<int>(
@@ -457,9 +525,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             controller: _amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
-              labelText: currencyCode == null
-                  ? l10n.transactionAmountLabel
-                  : '${l10n.transactionAmountLabel} ($currencyCode)',
+              labelText: _amountLabel(l10n, currencyCode),
               border: const OutlineInputBorder(),
             ),
             validator: (String? value) {
@@ -470,7 +536,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
               return null;
             },
           ),
-          if (needsRate) ...<Widget>[
+          if (needsRate && !widget.billMode) ...<Widget>[
             const SizedBox(height: AppSpacing.lg),
             TextFormField(
               controller: _rateController,
@@ -531,7 +597,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                   )
                   .toList(growable: false),
             ),
-          if (_categoryIds.length >= 2) ...<Widget>[
+          if (_categoryIds.length >= 2 && !widget.billMode) ...<Widget>[
             const SizedBox(height: AppSpacing.sm),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
