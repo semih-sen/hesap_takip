@@ -7,6 +7,7 @@ import '../database/app_database_provider.dart';
 import '../database/daos/transaction_dao.dart';
 import '../models/mappers/transaction_mapper.dart';
 import '../models/transaction.dart';
+import '../models/transaction_filter.dart';
 
 part 'transaction_repository.g.dart';
 
@@ -33,8 +34,12 @@ abstract interface class TransactionRepository {
   /// Transactions newest-first; narrowed to [walletId] when given.
   Stream<List<Transaction>> watchTransactions({int? walletId});
 
-  /// Newest-first denormalized rows across ALL wallets for the list UI.
-  Stream<List<TransactionListRowData>> watchTransactionList();
+  /// Newest-first denormalized rows for the List scope, applying [filter]'s
+  /// predicates in SQL and bounded to [limit] rows (growing-window pagination).
+  Stream<List<TransactionListRowData>> watchTransactionRows(
+    TransactionFilter filter, {
+    required int limit,
+  });
 
   /// The transaction with [id], or `null`.
   Future<Transaction?> findTransaction(int id);
@@ -81,8 +86,10 @@ class DriftTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Stream<List<TransactionListRowData>> watchTransactionList() =>
-      _db.transactionDao.watchTransactionListRows();
+  Stream<List<TransactionListRowData>> watchTransactionRows(
+    TransactionFilter filter, {
+    required int limit,
+  }) => _db.transactionDao.watchTransactionRows(filter, limit: limit);
 
   @override
   Future<Transaction?> findTransaction(int id) async =>

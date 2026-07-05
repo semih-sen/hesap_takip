@@ -213,5 +213,61 @@
   "transactionsEmptyTitle": "Henüz işlem yok",
   "@transactionsEmptyTitle": { "description": "Empty-state title on the dashboard transaction list." },
   "transactionsEmptyMessage": "İlk gelir veya giderinizi ekleyin.",
-  "@transactionsEmptyMessage": { "description": "Empty-state message on the dashboard transaction list." }
+  "@transactionsEmptyMessage": { "description": "Empty-state message on the dashboard transaction list." },
+
+  "transactionStatusCompleted": "Tamamlandı",
+  "@transactionStatusCompleted": { "description": "Transaction status: completed." },
+  "transactionStatusPending": "Bekliyor",
+  "@transactionStatusPending": { "description": "Transaction status: pending." },
+  "transactionStatusScheduled": "Planlandı",
+  "@transactionStatusScheduled": { "description": "Transaction status: scheduled." },
+  "transactionStatusCancelled": "İptal edildi",
+  "@transactionStatusCancelled": { "description": "Transaction status: cancelled." },
+
+  "transactionPartiallyPaid": "Kısmen ödendi: {settled}/{planned}",
+  "@transactionPartiallyPaid": {
+    "description": "Row 3 label under a pending parent bill showing settled over planned amounts.",
+    "placeholders": { "settled": { "type": "String" }, "planned": { "type": "String" } }
+  },
+  "transactionTransferTo": "Transfer → {wallet}",
+  "@transactionTransferTo": {
+    "description": "Row 3 label on a transfer row naming the counter wallet.",
+    "placeholders": { "wallet": { "type": "String" } }
+  },
+  "transactionRecurringChip": "Tekrarlayan",
+  "@transactionRecurringChip": { "description": "Row 3 chip marking a recurring-generated transaction." },
+
+  "dateToday": "Bugün",
+  "@dateToday": { "description": "Sticky section header for transactions dated today." },
+  "dateYesterday": "Dün",
+  "@dateYesterday": { "description": "Sticky section header for transactions dated yesterday." },
+
+  "filterTitle": "Filtrele",
+  "@filterTitle": { "description": "Transaction list filter sheet title / filter button tooltip." },
+  "filterReset": "Sıfırla",
+  "@filterReset": { "description": "Reset action clearing all list filters." },
+  "filterApply": "Uygula",
+  "@filterApply": { "description": "Apply/close button on the filter sheet." },
+  "filterClear": "Temizle",
+  "@filterClear": { "description": "Clear a single filter facet (e.g. the date range)." },
+  "filterAll": "Tümü",
+  "@filterAll": { "description": "Filter choice meaning no narrowing (all types / all statuses)." },
+  "filterSearchLabel": "Ara",
+  "@filterSearchLabel": { "description": "Search field label on the filter sheet (note / payee / category)." },
+  "filterDateRangeLabel": "Tarih aralığı",
+  "@filterDateRangeLabel": { "description": "Date-range section label on the filter sheet." },
+  "filterDateRangeAll": "Tüm zamanlar",
+  "@filterDateRangeAll": { "description": "Button text when no date range is selected (all time)." },
+  "filterTypeLabel": "Tür",
+  "@filterTypeLabel": { "description": "Transaction-type section label on the filter sheet." },
+  "filterStatusLabel": "Durum",
+  "@filterStatusLabel": { "description": "Transaction-status section label on the filter sheet." },
+  "filterWalletsLabel": "Cüzdanlar",
+  "@filterWalletsLabel": { "description": "Wallets multi-select section label on the filter sheet." },
+  "filterNoWallets": "Cüzdan yok.",
+  "@filterNoWallets": { "description": "Shown when there are no wallets to filter by." },
+  "filterCategoriesLabel": "Kategoriler",
+  "@filterCategoriesLabel": { "description": "Categories multi-select section label on the filter sheet." },
+  "filterNoCategories": "Kategori yok.",
+  "@filterNoCategories": { "description": "Shown when there are no categories to filter by." }
 }

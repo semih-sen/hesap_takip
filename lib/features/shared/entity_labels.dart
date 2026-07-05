@@ -27,3 +27,14 @@ String transactionTypeLabel(AppLocalizations l10n, TransactionType type) =>
       TransactionType.expense => l10n.transactionTypeExpense,
       TransactionType.transfer => l10n.transactionTypeTransfer,
     };
+
+/// Maps a [TransactionStatus] to its localized Turkish label (filter toggles).
+String transactionStatusLabel(
+  AppLocalizations l10n,
+  TransactionStatus status,
+) => switch (status) {
+  TransactionStatus.completed => l10n.transactionStatusCompleted,
+  TransactionStatus.pending => l10n.transactionStatusPending,
+  TransactionStatus.scheduled => l10n.transactionStatusScheduled,
+  TransactionStatus.cancelled => l10n.transactionStatusCancelled,
+};

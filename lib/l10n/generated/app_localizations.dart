@@ -597,6 +597,144 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'İlk gelir veya giderinizi ekleyin.'**
   String get transactionsEmptyMessage;
+
+  /// Transaction status: completed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tamamlandı'**
+  String get transactionStatusCompleted;
+
+  /// Transaction status: pending.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bekliyor'**
+  String get transactionStatusPending;
+
+  /// Transaction status: scheduled.
+  ///
+  /// In tr, this message translates to:
+  /// **'Planlandı'**
+  String get transactionStatusScheduled;
+
+  /// Transaction status: cancelled.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal edildi'**
+  String get transactionStatusCancelled;
+
+  /// Row 3 label under a pending parent bill showing settled over planned amounts.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kısmen ödendi: {settled}/{planned}'**
+  String transactionPartiallyPaid(String settled, String planned);
+
+  /// Row 3 label on a transfer row naming the counter wallet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Transfer → {wallet}'**
+  String transactionTransferTo(String wallet);
+
+  /// Row 3 chip marking a recurring-generated transaction.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekrarlayan'**
+  String get transactionRecurringChip;
+
+  /// Sticky section header for transactions dated today.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bugün'**
+  String get dateToday;
+
+  /// Sticky section header for transactions dated yesterday.
+  ///
+  /// In tr, this message translates to:
+  /// **'Dün'**
+  String get dateYesterday;
+
+  /// Transaction list filter sheet title / filter button tooltip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Filtrele'**
+  String get filterTitle;
+
+  /// Reset action clearing all list filters.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıfırla'**
+  String get filterReset;
+
+  /// Apply/close button on the filter sheet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygula'**
+  String get filterApply;
+
+  /// Clear a single filter facet (e.g. the date range).
+  ///
+  /// In tr, this message translates to:
+  /// **'Temizle'**
+  String get filterClear;
+
+  /// Filter choice meaning no narrowing (all types / all statuses).
+  ///
+  /// In tr, this message translates to:
+  /// **'Tümü'**
+  String get filterAll;
+
+  /// Search field label on the filter sheet (note / payee / category).
+  ///
+  /// In tr, this message translates to:
+  /// **'Ara'**
+  String get filterSearchLabel;
+
+  /// Date-range section label on the filter sheet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tarih aralığı'**
+  String get filterDateRangeLabel;
+
+  /// Button text when no date range is selected (all time).
+  ///
+  /// In tr, this message translates to:
+  /// **'Tüm zamanlar'**
+  String get filterDateRangeAll;
+
+  /// Transaction-type section label on the filter sheet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tür'**
+  String get filterTypeLabel;
+
+  /// Transaction-status section label on the filter sheet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Durum'**
+  String get filterStatusLabel;
+
+  /// Wallets multi-select section label on the filter sheet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdanlar'**
+  String get filterWalletsLabel;
+
+  /// Shown when there are no wallets to filter by.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdan yok.'**
+  String get filterNoWallets;
+
+  /// Categories multi-select section label on the filter sheet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategoriler'**
+  String get filterCategoriesLabel;
+
+  /// Shown when there are no categories to filter by.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategori yok.'**
+  String get filterNoCategories;
 }
 
 class _AppLocalizationsDelegate

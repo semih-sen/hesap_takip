@@ -16,11 +16,24 @@ void main() {
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
 
+    // Own the container and dispose it in addTearDown (after the pending-timer
+    // check) so the dashboard's live Drift list stream — kept alive by the
+    // IndexedStack shell — tears down cleanly. Drive the stream with runAsync so
+    // it emits its first (empty) value before we settle. See the Phase-3
+    // drift-stream-in-widget-test gotcha.
+    final ProviderContainer container = ProviderContainer(
+      overrides: [appDatabaseProvider.overrideWithValue(db)],
+    );
+    addTearDown(container.dispose);
+
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      UncontrolledProviderScope(
+        container: container,
         child: const HesapTakipApp(),
       ),
+    );
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 150)),
     );
     await tester.pumpAndSettle();
 

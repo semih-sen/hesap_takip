@@ -15,13 +15,18 @@ import '../../application/transactions_providers.dart';
 ///
 /// Layout contract: a fixed-radius container with a left vertical accent stripe
 /// and a transparent accent-tinted background; a `Column` of Row 1 (title +
-/// colored amount) and Row 2 (wallet/note + value date). Row 3 (partial-payment
-/// progress / transfer counter-wallet / recurring / category chips) is a
-/// deliberate seam Phase 6 fills — it is intentionally not faked here.
+/// colored amount), Row 2 (wallet/note + value date) and a contextual Row 3.
+/// Row 3 renders, in priority order: partial-payment progress > transfer
+/// counter-wallet > recurring chip > category chips. The progress/transfer/
+/// recurring variants render only from real fields (populated in Phases 8–10);
+/// they are never faked, so today the common case is the category chips.
 class TransactionListItem extends StatelessWidget {
   const TransactionListItem({super.key, required this.row});
 
   final TransactionListRow row;
+
+  /// Max category chips shown inline before collapsing the rest into a "+N".
+  static const int _maxChips = 3;
 
   /// Stateless formatting engine (no rate math on this path); constructing it
   /// directly keeps the widget provider-free and const-friendly.
@@ -120,8 +125,9 @@ class TransactionListItem extends StatelessWidget {
                           ),
                         ],
                       ),
-                      // Row 3 seam (Phase 6): partial-payment progress, transfer
+                      // Row 3 (contextual): partial-payment progress, transfer
                       // counter-wallet, recurring chip, or category chips.
+                      ..._row3(context, theme, semantic, l10n),
                     ],
                   ),
                 ),
@@ -130,6 +136,110 @@ class TransactionListItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// The contextual third row, in priority order (§10.3): partial-payment
+  /// progress > transfer > recurring > category chips. Returns an empty list
+  /// (no Row 3, no spacer) when nothing applies.
+  List<Widget> _row3(
+    BuildContext context,
+    ThemeData theme,
+    AppSemanticColors semantic,
+    AppLocalizations l10n,
+  ) {
+    final Widget? content = _row3Content(context, theme, semantic, l10n);
+    if (content == null) {
+      return const <Widget>[];
+    }
+    return <Widget>[const SizedBox(height: AppSpacing.xs + 2), content];
+  }
+
+  Widget? _row3Content(
+    BuildContext context,
+    ThemeData theme,
+    AppSemanticColors semantic,
+    AppLocalizations l10n,
+  ) {
+    // 1) Pending parent with partial payments → progress bar (Phase 9).
+    final int? planned = row.plannedAmountMinor;
+    if (row.isPendingParent && planned != null && planned > 0) {
+      final int settled = row.settledAmountMinor ?? 0;
+      final double value = (settled / planned).clamp(0.0, 1.0);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          ClipRRect(
+            borderRadius: AppRadius.smAll,
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 4,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              valueColor: AlwaysStoppedAnimation<Color>(semantic.income),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            l10n.transactionPartiallyPaid(
+              _currency.format(settled, row.currencyCode),
+              _currency.format(planned, row.currencyCode),
+            ),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: semantic.textMuted,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 2) Transfer → counter-wallet (Phase 8): renders only when present.
+    final String? counter = row.counterWalletName;
+    if (row.type == TransactionType.transfer && counter != null) {
+      return _MetaChip(
+        icon: Icons.swap_horiz,
+        label: l10n.transactionTransferTo(counter),
+        color: semantic.transfer,
+        theme: theme,
+      );
+    }
+
+    // 3) Recurring-generated → "Tekrarlayan" chip (Phase 10).
+    if (row.isRecurring) {
+      return _MetaChip(
+        icon: Icons.repeat,
+        label: l10n.transactionRecurringChip,
+        color: theme.colorScheme.primary,
+        theme: theme,
+      );
+    }
+
+    // 4) The common case → category chips.
+    if (row.categories.isNotEmpty) {
+      return _categoryChips(theme, semantic);
+    }
+    return null;
+  }
+
+  Widget _categoryChips(ThemeData theme, AppSemanticColors semantic) {
+    final List<CategoryChipData> shown = row.categories.length > _maxChips
+        ? row.categories.sublist(0, _maxChips)
+        : row.categories;
+    final int overflow = row.categories.length - shown.length;
+    return Wrap(
+      spacing: AppSpacing.xs + 2,
+      runSpacing: AppSpacing.xs,
+      children: <Widget>[
+        for (final CategoryChipData c in shown)
+          _CategoryChip(chip: c, theme: theme, mutedColor: semantic.textMuted),
+        if (overflow > 0)
+          Text(
+            '+$overflow',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: semantic.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+      ],
     );
   }
 
@@ -153,5 +263,84 @@ class TransactionListItem extends StatelessWidget {
     }
     final String trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
+  }
+}
+
+/// A single category chip: a color dot + the category name, on a faint pill.
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.chip,
+    required this.theme,
+    required this.mutedColor,
+  });
+
+  final CategoryChipData chip;
+  final ThemeData theme;
+  final Color mutedColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color dot = Color(chip.colorValue);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: dot.withValues(alpha: 0.14),
+        borderRadius: AppRadius.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppSpacing.xs + 2),
+          Text(
+            chip.name,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A slim leading-icon meta chip used by the transfer/recurring Row-3 variants.
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.theme,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: AppSpacing.xs + 2),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
   }
 }

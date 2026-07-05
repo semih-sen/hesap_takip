@@ -38,8 +38,12 @@ abstract final class AppRadius {
   static const Radius smRadius = Radius.circular(sm);
   static const Radius mdRadius = Radius.circular(md);
   static const Radius lgRadius = Radius.circular(lg);
+  static const Radius pillRadius = Radius.circular(pill);
 
   static const BorderRadius smAll = BorderRadius.all(smRadius);
   static const BorderRadius mdAll = BorderRadius.all(mdRadius);
   static const BorderRadius lgAll = BorderRadius.all(lgRadius);
+
+  /// Fully rounded — for chips/badges.
+  static const BorderRadius pillAll = BorderRadius.all(pillRadius);
 }

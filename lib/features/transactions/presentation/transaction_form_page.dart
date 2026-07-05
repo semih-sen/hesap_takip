@@ -21,6 +21,7 @@ import '../../accounts/application/accounts_providers.dart';
 import '../../categories/application/categories_providers.dart';
 import '../../shared/entity_labels.dart';
 import '../../wallets/application/wallets_providers.dart';
+import 'transaction_form_theme.dart';
 
 /// Create/edit an income or expense transaction (PROJECT_PLAN §5.2–§5.3).
 ///
@@ -330,22 +331,46 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String base = ref.watch(baseCurrencyProvider);
     final AsyncValue<List<Wallet>> walletsAsync = ref.watch(allWalletsProvider);
+    final Color accent = accentForType(_type);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? l10n.transactionEdit : l10n.transactionAdd),
-      ),
-      body: SafeArea(
-        child: walletsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (Object e, StackTrace _) =>
-              Center(child: Text(l10n.errorGeneric)),
-          data: (List<Wallet> wallets) {
-            if (_loading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            return _buildForm(context, l10n, base, wallets);
-          },
+    // Wrap the whole Scaffold (AppBar included) in the type-tinted dark theme so
+    // flipping Gelir↔Gider cross-fades the accent (PART A). The theme stays
+    // Brightness.dark; only the accent roles change. The `showDatePicker`
+    // launched from this subtree deliberately inherits the tint (on-brand).
+    return AnimatedTheme(
+      data: tintedFormTheme(Theme.of(context), _type),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_isEdit ? l10n.transactionEdit : l10n.transactionAdd),
+        ),
+        // A very faint top-down accent wash behind the body adds subtle depth
+        // without ever reading as a colored (non-dark) page (alpha ≤ 0.06).
+        body: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: <Color>[
+                accent.withValues(alpha: 0.05),
+                accent.withValues(alpha: 0.0),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: walletsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (Object e, StackTrace _) =>
+                  Center(child: Text(l10n.errorGeneric)),
+              data: (List<Wallet> wallets) {
+                if (_loading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return _buildForm(context, l10n, base, wallets);
+              },
+            ),
+          ),
         ),
       ),
     );

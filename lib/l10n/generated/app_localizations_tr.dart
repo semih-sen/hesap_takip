@@ -276,4 +276,77 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get transactionsEmptyMessage => 'İlk gelir veya giderinizi ekleyin.';
+
+  @override
+  String get transactionStatusCompleted => 'Tamamlandı';
+
+  @override
+  String get transactionStatusPending => 'Bekliyor';
+
+  @override
+  String get transactionStatusScheduled => 'Planlandı';
+
+  @override
+  String get transactionStatusCancelled => 'İptal edildi';
+
+  @override
+  String transactionPartiallyPaid(String settled, String planned) {
+    return 'Kısmen ödendi: $settled/$planned';
+  }
+
+  @override
+  String transactionTransferTo(String wallet) {
+    return 'Transfer → $wallet';
+  }
+
+  @override
+  String get transactionRecurringChip => 'Tekrarlayan';
+
+  @override
+  String get dateToday => 'Bugün';
+
+  @override
+  String get dateYesterday => 'Dün';
+
+  @override
+  String get filterTitle => 'Filtrele';
+
+  @override
+  String get filterReset => 'Sıfırla';
+
+  @override
+  String get filterApply => 'Uygula';
+
+  @override
+  String get filterClear => 'Temizle';
+
+  @override
+  String get filterAll => 'Tümü';
+
+  @override
+  String get filterSearchLabel => 'Ara';
+
+  @override
+  String get filterDateRangeLabel => 'Tarih aralığı';
+
+  @override
+  String get filterDateRangeAll => 'Tüm zamanlar';
+
+  @override
+  String get filterTypeLabel => 'Tür';
+
+  @override
+  String get filterStatusLabel => 'Durum';
+
+  @override
+  String get filterWalletsLabel => 'Cüzdanlar';
+
+  @override
+  String get filterNoWallets => 'Cüzdan yok.';
+
+  @override
+  String get filterCategoriesLabel => 'Kategoriler';
+
+  @override
+  String get filterNoCategories => 'Kategori yok.';
 }

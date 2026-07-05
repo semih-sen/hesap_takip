@@ -121,7 +121,10 @@ void main() {
         repo.createTransactionWithCategories(
           transaction: expenseTxn(walletId, amountMinor: 1000),
           links: <TransactionCategoryLink>[
-            TransactionCategoryLink(categoryId: catA, allocatedAmountMinor: 1100),
+            TransactionCategoryLink(
+              categoryId: catA,
+              allocatedAmountMinor: 1100,
+            ),
             TransactionCategoryLink(categoryId: catB, allocatedAmountMinor: 50),
           ],
         ),
@@ -136,49 +139,59 @@ void main() {
       expect(linkRows, 0);
     });
 
-    test('a valid split is stored with the last absorbing the remainder',
-        () async {
-      final int accountId = await seedAccount();
-      final int walletId = await seedWallet(accountId);
-      final int catA = await seedCategory(name: 'A');
-      final int catB = await seedCategory(name: 'B');
+    test(
+      'a valid split is stored with the last absorbing the remainder',
+      () async {
+        final int accountId = await seedAccount();
+        final int walletId = await seedWallet(accountId);
+        final int catA = await seedCategory(name: 'A');
+        final int catB = await seedCategory(name: 'B');
 
-      final int id = await repo.createTransactionWithCategories(
-        transaction: expenseTxn(walletId, amountMinor: 1000),
-        links: <TransactionCategoryLink>[
-          TransactionCategoryLink(categoryId: catA, allocatedAmountMinor: 300),
-          TransactionCategoryLink(categoryId: catB, allocatedAmountMinor: 401),
-        ],
-      );
+        final int id = await repo.createTransactionWithCategories(
+          transaction: expenseTxn(walletId, amountMinor: 1000),
+          links: <TransactionCategoryLink>[
+            TransactionCategoryLink(
+              categoryId: catA,
+              allocatedAmountMinor: 300,
+            ),
+            TransactionCategoryLink(
+              categoryId: catB,
+              allocatedAmountMinor: 401,
+            ),
+          ],
+        );
 
-      final rows = await db.transactionDao.getCategoryLinksForTransaction(id);
-      final int sum = rows.fold<int>(
-        0,
-        (int acc, row) => acc + (row.allocatedAmountMinor ?? 0),
-      );
-      expect(sum, 1000);
-    });
+        final rows = await db.transactionDao.getCategoryLinksForTransaction(id);
+        final int sum = rows.fold<int>(
+          0,
+          (int acc, row) => acc + (row.allocatedAmountMinor ?? 0),
+        );
+        expect(sum, 1000);
+      },
+    );
   });
 
   group('replaceCategoryLinks', () {
-    test('is idempotent — repeating the same set keeps one row per category',
-        () async {
-      final int accountId = await seedAccount();
-      final int walletId = await seedWallet(accountId);
-      final int catA = await seedCategory(name: 'A');
-      final int id = await repo.createTransaction(expenseTxn(walletId));
+    test(
+      'is idempotent — repeating the same set keeps one row per category',
+      () async {
+        final int accountId = await seedAccount();
+        final int walletId = await seedWallet(accountId);
+        final int catA = await seedCategory(name: 'A');
+        final int id = await repo.createTransaction(expenseTxn(walletId));
 
-      final links = <TransactionCategoriesCompanion>[
-        TransactionCategoriesCompanion.insert(
-          transactionId: id,
-          categoryId: catA,
-        ),
-      ];
-      await db.transactionDao.replaceCategoryLinks(id, links);
-      await db.transactionDao.replaceCategoryLinks(id, links);
+        final links = <TransactionCategoriesCompanion>[
+          TransactionCategoriesCompanion.insert(
+            transactionId: id,
+            categoryId: catA,
+          ),
+        ];
+        await db.transactionDao.replaceCategoryLinks(id, links);
+        await db.transactionDao.replaceCategoryLinks(id, links);
 
-      expect(await countLinks(id), 1);
-    });
+        expect(await countLinks(id), 1);
+      },
+    );
   });
 
   group('rate snapshot', () {
@@ -239,23 +252,25 @@ void main() {
   });
 
   group('balance reactivity', () {
-    test('a completed expense lowers the balance; deleting restores it',
-        () async {
-      final BalanceService balances = BalanceService(db);
-      final int accountId = await seedAccount();
-      final int walletId = await seedWallet(accountId, initialMinor: 50000);
-      final int catA = await seedCategory(name: 'A');
+    test(
+      'a completed expense lowers the balance; deleting restores it',
+      () async {
+        final BalanceService balances = BalanceService(db);
+        final int accountId = await seedAccount();
+        final int walletId = await seedWallet(accountId, initialMinor: 50000);
+        final int catA = await seedCategory(name: 'A');
 
-      final int id = await repo.createTransactionWithCategories(
-        transaction: expenseTxn(walletId, amountMinor: 20000),
-        links: <TransactionCategoryLink>[
-          TransactionCategoryLink(categoryId: catA),
-        ],
-      );
-      expect(await balances.watchWalletBalanceMinor(walletId).first, 30000);
+        final int id = await repo.createTransactionWithCategories(
+          transaction: expenseTxn(walletId, amountMinor: 20000),
+          links: <TransactionCategoryLink>[
+            TransactionCategoryLink(categoryId: catA),
+          ],
+        );
+        expect(await balances.watchWalletBalanceMinor(walletId).first, 30000);
 
-      await repo.deleteTransaction(id);
-      expect(await balances.watchWalletBalanceMinor(walletId).first, 50000);
-    });
+        await repo.deleteTransaction(id);
+        expect(await balances.watchWalletBalanceMinor(walletId).first, 50000);
+      },
+    );
   });
 }

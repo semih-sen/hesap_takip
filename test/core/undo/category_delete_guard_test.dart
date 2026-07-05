@@ -18,18 +18,16 @@ void main() {
     await database.close();
   });
 
-  Future<int> seedCategory({
-    String name = 'Kategori',
-    int? parentId,
-  }) => database.categoryDao.createCategory(
-    db.CategoriesCompanion.insert(
-      name: name,
-      type: CategoryType.expense,
-      parentId: Value(parentId),
-      colorValue: 0xFF222222,
-      iconCodePoint: 0xE002,
-    ),
-  );
+  Future<int> seedCategory({String name = 'Kategori', int? parentId}) =>
+      database.categoryDao.createCategory(
+        db.CategoriesCompanion.insert(
+          name: name,
+          type: CategoryType.expense,
+          parentId: Value(parentId),
+          colorValue: 0xFF222222,
+          iconCodePoint: 0xE002,
+        ),
+      );
 
   Category domainCategory(int id, {int? parentId}) => Category(
     id: id,
@@ -59,44 +57,46 @@ void main() {
     );
   });
 
-  test('canCommit is FALSE when a transaction references the category',
-      () async {
-    final int accountId = await database.accountDao.createAccount(
-      db.AccountsCompanion.insert(
-        name: 'Hesap',
-        type: AccountType.bank,
-        colorValue: 0xFF000000,
-        iconCodePoint: 0xE000,
-      ),
-    );
-    final int walletId = await database.walletDao.createWallet(
-      db.WalletsCompanion.insert(
-        accountId: accountId,
-        name: 'Cüzdan',
-        currencyCode: 'TRY',
-        colorValue: 0xFF111111,
-        iconCodePoint: 0xE001,
-      ),
-    );
-    final int categoryId = await seedCategory();
-    final int txnId = await database.transactionDao.createTransaction(
-      db.TransactionsCompanion.insert(
-        walletId: walletId,
-        type: TransactionType.expense,
-        flowDirection: FlowDirection.outflow,
-        status: TransactionStatus.completed,
-        amountMinor: 1000,
-        currencyCode: 'TRY',
-        exchangeRateToBase: Decimal.one,
-        baseAmountMinor: 1000,
-        valueDate: DateTime(2026, 7, 5),
-      ),
-    );
-    await database.transactionDao.addCategory(txnId, categoryId);
+  test(
+    'canCommit is FALSE when a transaction references the category',
+    () async {
+      final int accountId = await database.accountDao.createAccount(
+        db.AccountsCompanion.insert(
+          name: 'Hesap',
+          type: AccountType.bank,
+          colorValue: 0xFF000000,
+          iconCodePoint: 0xE000,
+        ),
+      );
+      final int walletId = await database.walletDao.createWallet(
+        db.WalletsCompanion.insert(
+          accountId: accountId,
+          name: 'Cüzdan',
+          currencyCode: 'TRY',
+          colorValue: 0xFF111111,
+          iconCodePoint: 0xE001,
+        ),
+      );
+      final int categoryId = await seedCategory();
+      final int txnId = await database.transactionDao.createTransaction(
+        db.TransactionsCompanion.insert(
+          walletId: walletId,
+          type: TransactionType.expense,
+          flowDirection: FlowDirection.outflow,
+          status: TransactionStatus.completed,
+          amountMinor: 1000,
+          currencyCode: 'TRY',
+          exchangeRateToBase: Decimal.one,
+          baseAmountMinor: 1000,
+          valueDate: DateTime(2026, 7, 5),
+        ),
+      );
+      await database.transactionDao.addCategory(txnId, categoryId);
 
-    expect(
-      await actionFor(domainCategory(categoryId)).canCommit(database),
-      isFalse,
-    );
-  });
+      expect(
+        await actionFor(domainCategory(categoryId)).canCommit(database),
+        isFalse,
+      );
+    },
+  );
 }
