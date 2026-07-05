@@ -987,6 +987,258 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Tahsil edildi'**
   String get settledIncome;
+
+  /// Recurring-rules screen title and Dashboard app-bar action tooltip.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekrarlayan işlemler'**
+  String get recurringTitle;
+
+  /// Add-recurring-rule button / form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kural ekle'**
+  String get recurringAdd;
+
+  /// Edit-recurring-rule form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kuralı düzenle'**
+  String get recurringEdit;
+
+  /// SnackBar text after queuing a recurring-rule delete.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kural silindi'**
+  String get recurringDeleted;
+
+  /// Empty-state title on the recurring-rules screen.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz tekrarlayan işlem yok'**
+  String get recurringEmptyTitle;
+
+  /// Empty-state message on the recurring-rules screen.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kira, maaş, abonelik gibi düzenli işlemler için kural ekleyin.'**
+  String get recurringEmptyMessage;
+
+  /// App-bar action that manually runs recurring generation.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şimdi oluştur'**
+  String get recurringGenerateNow;
+
+  /// SnackBar text after a manual generation run inserted some transactions.
+  ///
+  /// In tr, this message translates to:
+  /// **'{count} işlem oluşturuldu'**
+  String recurringGeneratedCount(int count);
+
+  /// SnackBar text after a manual generation run inserted nothing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yeni işlem yok'**
+  String get recurringGeneratedNone;
+
+  /// Badge on a paused (isActive=false) rule row.
+  ///
+  /// In tr, this message translates to:
+  /// **'Duraklatıldı'**
+  String get recurringPausedBadge;
+
+  /// Menu action to pause (deactivate) a rule.
+  ///
+  /// In tr, this message translates to:
+  /// **'Duraklat'**
+  String get recurringActionPause;
+
+  /// Menu action to resume (reactivate) a rule.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sürdür'**
+  String get recurringActionResume;
+
+  /// Name field label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ad'**
+  String get recurringNameLabel;
+
+  /// Wallet picker label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Cüzdan'**
+  String get recurringWalletLabel;
+
+  /// Amount field label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tutar'**
+  String get recurringAmountLabel;
+
+  /// Frequency dropdown label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sıklık'**
+  String get recurringFrequencyLabel;
+
+  /// Frequency option: daily.
+  ///
+  /// In tr, this message translates to:
+  /// **'Günlük'**
+  String get recurringFrequencyDaily;
+
+  /// Frequency option: weekly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Haftalık'**
+  String get recurringFrequencyWeekly;
+
+  /// Frequency option: monthly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Aylık'**
+  String get recurringFrequencyMonthly;
+
+  /// Frequency option: yearly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yıllık'**
+  String get recurringFrequencyYearly;
+
+  /// Interval stepper label, e.g. 'Her 2 ay'.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her {count} {unit}'**
+  String recurringIntervalLabel(int count, String unit);
+
+  /// Interval unit noun (day).
+  ///
+  /// In tr, this message translates to:
+  /// **'gün'**
+  String get recurringUnitDay;
+
+  /// Interval unit noun (week).
+  ///
+  /// In tr, this message translates to:
+  /// **'hafta'**
+  String get recurringUnitWeek;
+
+  /// Interval unit noun (month).
+  ///
+  /// In tr, this message translates to:
+  /// **'ay'**
+  String get recurringUnitMonth;
+
+  /// Interval unit noun (year).
+  ///
+  /// In tr, this message translates to:
+  /// **'yıl'**
+  String get recurringUnitYear;
+
+  /// Day-of-month field label (monthly/yearly), 1–31 clamped.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ayın günü'**
+  String get recurringByMonthDayLabel;
+
+  /// Day-of-week picker label (weekly).
+  ///
+  /// In tr, this message translates to:
+  /// **'Haftanın günü'**
+  String get recurringByWeekdayLabel;
+
+  /// Start-date picker label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Başlangıç tarihi'**
+  String get recurringStartDateLabel;
+
+  /// Optional end-date picker label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş tarihi (isteğe bağlı)'**
+  String get recurringEndDateLabel;
+
+  /// Tooltip for clearing the optional end date.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş tarihini kaldır'**
+  String get recurringEndDateClear;
+
+  /// Optional maximum-occurrences field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'En fazla tekrar (isteğe bağlı)'**
+  String get recurringMaxOccurrencesLabel;
+
+  /// autoPost switch label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Otomatik işle'**
+  String get recurringAutoPostLabel;
+
+  /// Helper caption explaining the autoPost switch.
+  ///
+  /// In tr, this message translates to:
+  /// **'Açık: işlem tamamlanmış olarak eklenir. Kapalı: onay bekleyen (borç/alacak) olarak eklenir.'**
+  String get recurringAutoPostCaption;
+
+  /// Optional note field label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Not (isteğe bağlı)'**
+  String get recurringNoteLabel;
+
+  /// Category multi-select label on the recurring-rule form.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kategoriler'**
+  String get recurringCategoriesLabel;
+
+  /// Validation error: the end date precedes the start date.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bitiş tarihi başlangıçtan önce olamaz.'**
+  String get recurringValidationEndBeforeStart;
+
+  /// Frequency summary on a rule row, e.g. 'Her 1 ay'.
+  ///
+  /// In tr, this message translates to:
+  /// **'Her {count} {unit}'**
+  String recurringSummaryEvery(int count, String unit);
+
+  /// Suffix on a monthly/yearly rule summary naming the day-of-month.
+  ///
+  /// In tr, this message translates to:
+  /// **'gün {day}'**
+  String recurringSummaryMonthDay(int day);
+
+  /// Title of the this-only / this-and-future series-edit dialog.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tekrarlayan işlem'**
+  String get recurringEditScopeTitle;
+
+  /// Body of the series-edit dialog.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu işlem bir kurala bağlı. Neyi düzenlemek istiyorsunuz?'**
+  String get recurringEditScopeMessage;
+
+  /// Series-edit choice: detach and edit only this occurrence.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yalnızca bu işlem'**
+  String get recurringEditScopeThisOnly;
+
+  /// Series-edit choice: end the rule here and start a new one.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu ve gelecekteki işlemler'**
+  String get recurringEditScopeThisAndFuture;
 }
 
 class _AppLocalizationsDelegate

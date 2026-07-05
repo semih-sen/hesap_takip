@@ -483,4 +483,142 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settledIncome => 'Tahsil edildi';
+
+  @override
+  String get recurringTitle => 'Tekrarlayan işlemler';
+
+  @override
+  String get recurringAdd => 'Kural ekle';
+
+  @override
+  String get recurringEdit => 'Kuralı düzenle';
+
+  @override
+  String get recurringDeleted => 'Kural silindi';
+
+  @override
+  String get recurringEmptyTitle => 'Henüz tekrarlayan işlem yok';
+
+  @override
+  String get recurringEmptyMessage =>
+      'Kira, maaş, abonelik gibi düzenli işlemler için kural ekleyin.';
+
+  @override
+  String get recurringGenerateNow => 'Şimdi oluştur';
+
+  @override
+  String recurringGeneratedCount(int count) {
+    return '$count işlem oluşturuldu';
+  }
+
+  @override
+  String get recurringGeneratedNone => 'Yeni işlem yok';
+
+  @override
+  String get recurringPausedBadge => 'Duraklatıldı';
+
+  @override
+  String get recurringActionPause => 'Duraklat';
+
+  @override
+  String get recurringActionResume => 'Sürdür';
+
+  @override
+  String get recurringNameLabel => 'Ad';
+
+  @override
+  String get recurringWalletLabel => 'Cüzdan';
+
+  @override
+  String get recurringAmountLabel => 'Tutar';
+
+  @override
+  String get recurringFrequencyLabel => 'Sıklık';
+
+  @override
+  String get recurringFrequencyDaily => 'Günlük';
+
+  @override
+  String get recurringFrequencyWeekly => 'Haftalık';
+
+  @override
+  String get recurringFrequencyMonthly => 'Aylık';
+
+  @override
+  String get recurringFrequencyYearly => 'Yıllık';
+
+  @override
+  String recurringIntervalLabel(int count, String unit) {
+    return 'Her $count $unit';
+  }
+
+  @override
+  String get recurringUnitDay => 'gün';
+
+  @override
+  String get recurringUnitWeek => 'hafta';
+
+  @override
+  String get recurringUnitMonth => 'ay';
+
+  @override
+  String get recurringUnitYear => 'yıl';
+
+  @override
+  String get recurringByMonthDayLabel => 'Ayın günü';
+
+  @override
+  String get recurringByWeekdayLabel => 'Haftanın günü';
+
+  @override
+  String get recurringStartDateLabel => 'Başlangıç tarihi';
+
+  @override
+  String get recurringEndDateLabel => 'Bitiş tarihi (isteğe bağlı)';
+
+  @override
+  String get recurringEndDateClear => 'Bitiş tarihini kaldır';
+
+  @override
+  String get recurringMaxOccurrencesLabel => 'En fazla tekrar (isteğe bağlı)';
+
+  @override
+  String get recurringAutoPostLabel => 'Otomatik işle';
+
+  @override
+  String get recurringAutoPostCaption =>
+      'Açık: işlem tamamlanmış olarak eklenir. Kapalı: onay bekleyen (borç/alacak) olarak eklenir.';
+
+  @override
+  String get recurringNoteLabel => 'Not (isteğe bağlı)';
+
+  @override
+  String get recurringCategoriesLabel => 'Kategoriler';
+
+  @override
+  String get recurringValidationEndBeforeStart =>
+      'Bitiş tarihi başlangıçtan önce olamaz.';
+
+  @override
+  String recurringSummaryEvery(int count, String unit) {
+    return 'Her $count $unit';
+  }
+
+  @override
+  String recurringSummaryMonthDay(int day) {
+    return 'gün $day';
+  }
+
+  @override
+  String get recurringEditScopeTitle => 'Tekrarlayan işlem';
+
+  @override
+  String get recurringEditScopeMessage =>
+      'Bu işlem bir kurala bağlı. Neyi düzenlemek istiyorsunuz?';
+
+  @override
+  String get recurringEditScopeThisOnly => 'Yalnızca bu işlem';
+
+  @override
+  String get recurringEditScopeThisAndFuture => 'Bu ve gelecekteki işlemler';
 }

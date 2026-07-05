@@ -98,6 +98,32 @@ void main() {
     int limit = 1000,
   }) => repo.watchTransactionRows(filter, limit: limit).first;
 
+  test(
+    'row.accountColorValue is the owning account color, not the category color',
+    () async {
+      // Account color and category color are deliberately different so a bug
+      // that reads the wrong source is caught.
+      const int accountColor = 0xFF00A000;
+      final int a = await db.accountDao.createAccount(
+        AccountsCompanion.insert(
+          name: 'Banka',
+          type: AccountType.bank,
+          colorValue: accountColor,
+          iconCodePoint: 0xE000,
+        ),
+      );
+      final int w = await seedWallet(a);
+      final int cat = await seedCategory(name: 'Yemek'); // colorValue 0xFF222222
+      await seedTxn(w, categoryIds: <int>[cat]);
+
+      final List<TransactionListRowData> rows = await query(
+        TransactionFilter.initial(),
+      );
+      expect(rows.single.accountColorValue, accountColor);
+      expect(rows.single.categories.single.colorValue, 0xFF222222);
+    },
+  );
+
   test('initial() returns ALL rows (no narrowing)', () async {
     final int a = await seedAccount();
     final int w = await seedWallet(a);

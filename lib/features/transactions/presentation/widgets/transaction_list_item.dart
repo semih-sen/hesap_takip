@@ -28,6 +28,11 @@ class TransactionListItem extends StatelessWidget {
   /// Max category chips shown inline before collapsing the rest into a "+N".
   static const int _maxChips = 3;
 
+  /// Fixed height of the Row-3 slot. Always rendered (even when empty) so every
+  /// row — completed, pending, transfer, recurring, or bare — is the exact same
+  /// height. Sized to fit the tallest single-line Row-3 variant.
+  static const double _row3SlotHeight = 22;
+
   /// Stateless formatting engine (no rate math on this path); constructing it
   /// directly keeps the widget provider-free and const-friendly.
   static const CurrencyService _currency = CurrencyService();
@@ -40,6 +45,9 @@ class TransactionListItem extends StatelessWidget {
         theme.extension<AppSemanticColors>() ?? AppSemanticColors.dark;
 
     final Color accent = Color(row.accentColorValue);
+    // The owning account's color — drives the stripe only (decoupled from the
+    // category/type accent that tints the background). See §10.3.
+    final Color accountAccent = Color(row.accountColorValue);
     final Color amountColor = switch (row.type) {
       TransactionType.income => semantic.income,
       TransactionType.expense => semantic.expense,
@@ -67,13 +75,14 @@ class TransactionListItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              // Left vertical accent stripe (full height; corners clipped round).
-              Container(width: 5, color: accent),
+              // Left vertical stripe = owning account's color (full height;
+              // corners clipped round). Decoupled from the background tint.
+              Container(width: 5, color: accountAccent),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm + 2,
+                    vertical: AppSpacing.sm,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -140,8 +149,9 @@ class TransactionListItem extends StatelessWidget {
   }
 
   /// The contextual third row, in priority order (§10.3): partial-payment
-  /// progress > transfer > recurring > category chips. Returns an empty list
-  /// (no Row 3, no spacer) when nothing applies.
+  /// progress > transfer > recurring > category chips. The slot is rendered
+  /// **unconditionally** at a fixed [_row3SlotHeight] — even with no content —
+  /// so every row is identical height regardless of variant.
   List<Widget> _row3(
     BuildContext context,
     ThemeData theme,
@@ -149,10 +159,16 @@ class TransactionListItem extends StatelessWidget {
     AppLocalizations l10n,
   ) {
     final Widget? content = _row3Content(context, theme, semantic, l10n);
-    if (content == null) {
-      return const <Widget>[];
-    }
-    return <Widget>[const SizedBox(height: AppSpacing.xs + 2), content];
+    return <Widget>[
+      const SizedBox(height: AppSpacing.xs),
+      SizedBox(
+        height: _row3SlotHeight,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: content ?? const SizedBox.shrink(),
+        ),
+      ),
+    ];
   }
 
   Widget? _row3Content(
@@ -202,13 +218,24 @@ class TransactionListItem extends StatelessWidget {
         ? row.categories.sublist(0, _maxChips)
         : row.categories;
     final int overflow = row.categories.length - shown.length;
-    return Wrap(
-      spacing: AppSpacing.xs + 2,
-      runSpacing: AppSpacing.xs,
+    // A non-wrapping Row (never grows vertically) keeps the fixed slot height
+    // valid by construction; each chip is Flexible so a narrow row truncates
+    // instead of overflowing. Trade-off: fewer chips fit before "+N" (§A.6).
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        for (final CategoryChipData c in shown)
-          _CategoryChip(chip: c, theme: theme, mutedColor: semantic.textMuted),
-        if (overflow > 0)
+        for (int i = 0; i < shown.length; i++) ...<Widget>[
+          if (i > 0) const SizedBox(width: AppSpacing.xs + 2),
+          Flexible(
+            child: _CategoryChip(
+              chip: shown[i],
+              theme: theme,
+              mutedColor: semantic.textMuted,
+            ),
+          ),
+        ],
+        if (overflow > 0) ...<Widget>[
+          const SizedBox(width: AppSpacing.xs + 2),
           Text(
             '+$overflow',
             style: theme.textTheme.bodySmall?.copyWith(
@@ -216,6 +243,7 @@ class TransactionListItem extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+        ],
       ],
     );
   }
@@ -223,10 +251,8 @@ class TransactionListItem extends StatelessWidget {
   /// The optional secondary text on Row 2: the note, else a payee that isn't
   /// already the title (so it is not shown twice).
   String? _secondaryLine(String title) {
-    final String? note = _clean(row.note);
-    if (note != null) {
-      return note;
-    }
+    
+   
     final String? payee = _clean(row.payee);
     if (payee != null && payee != title) {
       return payee;
@@ -276,10 +302,14 @@ class _CategoryChip extends StatelessWidget {
             decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
           ),
           const SizedBox(width: AppSpacing.xs + 2),
-          Text(
-            chip.name,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurface,
+          Flexible(
+            child: Text(
+              chip.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ),
         ],

@@ -27,6 +27,7 @@ void main() {
     bool isOverdue = false,
     String? counterWalletName,
     bool isRecurring = false,
+    int accountColorValue = 0xFF5B8DEF,
   }) {
     return TransactionListRow(
       id: 1,
@@ -41,6 +42,7 @@ void main() {
       accentColorValue: categories.isEmpty
           ? 0xFFFF6B6B
           : categories.first.colorValue,
+      accountColorValue: accountColorValue,
       note: note,
       categories: categories,
       isPending: isPending,

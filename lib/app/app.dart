@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hesap_takip/app/router.dart';
 import 'package:hesap_takip/app/theme/app_theme.dart';
 import 'package:hesap_takip/core/undo/undo_service.dart';
+import 'package:hesap_takip/features/recurring/application/recurring_providers.dart';
 import 'package:hesap_takip/l10n/generated/app_localizations.dart';
 
 /// Root application widget.
@@ -52,6 +53,11 @@ class _HesapTakipAppState extends ConsumerState<HesapTakipApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Cold-start recurring generation, fire-and-forget (§B.5). A local SQLite
+    // batch, so the first frame is NOT gated on it — we just kick it off and let
+    // the list repaint reactively as rows land.
+    ref.watch(recurringGenerationProvider);
+
     return MaterialApp.router(
       onGenerateTitle: (BuildContext context) =>
           AppLocalizations.of(context).appTitle,

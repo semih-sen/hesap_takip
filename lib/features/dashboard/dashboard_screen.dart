@@ -6,6 +6,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../transactions/application/transactions_providers.dart';
 import '../transactions/presentation/transaction_form_page.dart';
 import '../transactions/presentation/transfer_form_page.dart';
+import '../recurring/presentation/recurring_rules_screen.dart';
 import '../transactions/presentation/widgets/transaction_filter_sheet.dart';
 import '../transactions/presentation/widgets/transaction_list_view.dart';
 import 'widgets/summary_account_selector.dart';
@@ -33,6 +34,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  void _openRecurring(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const RecurringRulesScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -48,6 +55,11 @@ class DashboardScreen extends ConsumerWidget {
             tooltip: l10n.transferAdd,
             onPressed: () => _addTransfer(context),
             icon: const Icon(Icons.swap_horiz),
+          ),
+          IconButton(
+            tooltip: l10n.recurringTitle,
+            onPressed: () => _openRecurring(context),
+            icon: const Icon(Icons.repeat),
           ),
           IconButton(
             tooltip: l10n.filterTitle,

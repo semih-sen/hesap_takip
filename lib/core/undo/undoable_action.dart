@@ -2,7 +2,7 @@ import '../../data/database/app_database.dart';
 
 /// The kinds of entity an [UndoableAction] can target. Used by [EntityRef] so
 /// the optimistic overlay can match a queued action to a list item by identity.
-enum UndoEntityType { transaction, category, wallet, account }
+enum UndoEntityType { transaction, category, wallet, account, recurringRule }
 
 /// A stable identity for an entity: its [type] plus its integer primary key.
 ///

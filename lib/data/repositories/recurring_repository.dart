@@ -13,6 +13,9 @@ abstract interface class RecurringRepository {
   /// Recurring rules; only `isActive` ones when [activeOnly] is true.
   Stream<List<RecurringRule>> watchRules({bool activeOnly = false});
 
+  /// One-shot fetch of the active rules (for batch generation, not a stream).
+  Future<List<RecurringRule>> getActiveRules();
+
   /// The rule with [id], or `null`.
   Future<RecurringRule?> findRule(int id);
 
@@ -24,6 +27,19 @@ abstract interface class RecurringRepository {
 
   /// Hard-deletes the rule (cascades its category links).
   Future<void> deleteRule(int id);
+
+  /// The category ids linked to [ruleId].
+  Future<List<int>> getCategoryIds(int ruleId);
+
+  /// Replaces ALL category links for [ruleId] with [categoryIds].
+  Future<void> setCategories(int ruleId, List<int> categoryIds);
+
+  /// Pauses/resumes [ruleId] (toggles `isActive`; no undo).
+  Future<void> setActive(int ruleId, bool isActive);
+
+  /// Caps [ruleId]'s future generation at [endDate] (series-edit "this and
+  /// future"), leaving already-generated rows untouched.
+  Future<void> setEndDate(int ruleId, DateTime endDate);
 }
 
 class DriftRecurringRepository implements RecurringRepository {
@@ -40,6 +56,12 @@ class DriftRecurringRepository implements RecurringRepository {
   }
 
   @override
+  Future<List<RecurringRule>> getActiveRules() async =>
+      (await _db.recurringDao.getActiveRules())
+          .map((row) => row.toDomain())
+          .toList();
+
+  @override
   Future<RecurringRule?> findRule(int id) async =>
       (await _db.recurringDao.getRuleById(id))?.toDomain();
 
@@ -53,6 +75,22 @@ class DriftRecurringRepository implements RecurringRepository {
 
   @override
   Future<void> deleteRule(int id) => _db.recurringDao.deleteRule(id);
+
+  @override
+  Future<List<int>> getCategoryIds(int ruleId) =>
+      _db.recurringDao.getCategoryIdsForRule(ruleId);
+
+  @override
+  Future<void> setCategories(int ruleId, List<int> categoryIds) =>
+      _db.recurringDao.replaceCategoryLinks(ruleId, categoryIds);
+
+  @override
+  Future<void> setActive(int ruleId, bool isActive) =>
+      _db.recurringDao.setActive(ruleId, isActive);
+
+  @override
+  Future<void> setEndDate(int ruleId, DateTime endDate) =>
+      _db.recurringDao.setEndDate(ruleId, endDate);
 }
 
 /// App-lifetime singleton recurring-rule repository.

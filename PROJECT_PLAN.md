@@ -452,7 +452,12 @@ for each rule in activeRules:
         amountMinor: rule.amountMinor, currencyCode: rule.currencyCode,
         exchangeRateToBase/baseAmountMinor: snapshot(rule.currencyCode, at: next),
         valueDate: next, recurringRuleId: rule.id,
-        // if not autoPost, treat as a pending item (optionally a payable parent))
+        // If not autoPost, insert a PLAIN pending row (status: pending set
+        // explicitly) — settle-in-place (Phase 9 rework), so NO
+        // plannedAmountMinor/settledAmountMinor. It is immediately usable by the
+        // existing swipe-to-settle flow. The explicit status override matters:
+        // generation only ever produces on-or-before-today dates, so without it
+        // a date-derived status would wrongly classify the row as completed.)
       insert rule categories into TransactionCategories
       update rule set lastGeneratedDate = next, generatedCount = generatedCount + 1
     }
@@ -561,8 +566,9 @@ Other providers: `appDatabaseProvider` (keepAlive), `settingsProvider`, `account
 
 **Layout contract (implement exactly; no `ListTile`):**
 - Root is a `RepaintBoundary` wrapping a fixed-radius container.
-- **Left vertical color stripe:** width ~5px, full item height, rounded left corners, color = the transaction's accent (category color, else income/expense/transfer accent).
-- **Body background:** the same accent at low opacity (`accent.withValues(alpha: 0.08–0.12)`) — a *transparent tint*, never a solid fill.
+- **Left vertical color stripe:** width ~5px, full item height, rounded left corners, color = the **owning account's** color (`Wallet.accountId → Account.colorValue`) — it communicates *which account/wallet* the money belongs to. This is sourced independently of the tint below (Part A refactor): the stripe reads `accountColorValue`, the tint reads `accentColorValue`.
+- **Body background:** the **category/type accent** (`accentColorValue` = primary category color, else income/expense/transfer accent) at low opacity (`accent.withValues(alpha: 0.08–0.12)`) — a *transparent tint*, never a solid fill. Unchanged by the stripe refactor.
+- **Uniform height:** the Row-3 slot is rendered unconditionally at a fixed height (even when empty), so every variant (completed, pending, transfer, recurring, or bare) renders at the exact same height.
 - **Three rows** in a `Column`:
   - **Row 1:** `Expanded` title (primary category or payee, `titleMedium`, ellipsis) on the left; **amount** on the right, colored by flow (income = income accent, expense = expense accent, transfer = transfer accent), bold, currency-formatted for the transaction's currency.
   - **Row 2:** wallet name + optional note/payee (muted `bodySmall`) on the left; formatted `valueDate` (`tr_TR`) on the right.
@@ -682,5 +688,5 @@ A phase is complete only when: it compiles, `flutter analyze` is clean, its list
 
 ### Open decisions the agent should confirm with the product owner before/while building
 1. **Category split amounts** (`allocatedAmountMinor`): included in the schema but can be deferred to a later sub-phase of Phase 5 if not needed at launch.
-2. **Recurring non-autoPost items:** treat as plain `pending` reminders, or as payable *parent* bills (enabling partial payments on them)? Default assumed: plain pending reminders.
+2. **Recurring non-autoPost items:** ✅ RESOLVED (Phase 10). Generated as plain `pending` rows (settle-in-place, no planned/settled columns). They are fully compatible with the existing swipe-to-settle flow, so a partial payment on a recurring occurrence works exactly like any other pending item.
 3. **Exchange-rate source:** manual entry + cache only (no network) is assumed, matching the offline/local-first constraint. Add a fetcher later only if explicitly requested.

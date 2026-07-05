@@ -7,9 +7,12 @@ import '../../../../core/date/app_date.dart';
 import '../../../../core/undo/entity_actions.dart';
 import '../../../../core/undo/undo_service.dart';
 import '../../../../data/database/tables/enums.dart';
+import '../../../../data/models/recurring_rule.dart';
 import '../../../../data/models/transaction.dart';
+import '../../../../data/repositories/recurring_repository.dart';
 import '../../../../data/repositories/transaction_repository.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../recurring/presentation/recurring_rule_form_page.dart';
 import '../../../shared/undo_snackbar.dart';
 import '../../application/transactions_providers.dart';
 import '../transaction_date_group.dart';
@@ -96,9 +99,100 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
       );
       return;
     }
+    // A recurring-generated row asks the series-edit scope first (§8.4): "this
+    // occurrence only" detaches it into a one-off; "this and future" ends the
+    // rule here and opens a replacement rule form.
+    if (row.isRecurring) {
+      final TransactionRepository repo = ref.read(
+        transactionRepositoryProvider,
+      );
+      final Transaction? txn = await repo.findTransaction(row.id);
+      if (txn == null || !mounted) {
+        return;
+      }
+      if (txn.recurringRuleId != null) {
+        final _SeriesScope? scope = await _askSeriesScope();
+        if (scope == null || !mounted) {
+          return; // cancelled
+        }
+        if (scope == _SeriesScope.thisAndFuture) {
+          await _editThisAndFuture(txn);
+          return;
+        }
+        // "This occurrence only": detach, then fall through to the normal edit.
+        await repo.detachFromRecurringRule(txn.id);
+        if (!mounted) {
+          return;
+        }
+      }
+    }
+
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => TransactionFormPage(transactionId: row.id),
+      ),
+    );
+  }
+
+  /// Prompts the this-only / this-and-future series-edit choice.
+  Future<_SeriesScope?> _askSeriesScope() {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return showDialog<_SeriesScope>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(l10n.recurringEditScopeTitle),
+        content: Text(l10n.recurringEditScopeMessage),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.actionCancel),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_SeriesScope.thisOnly),
+            child: Text(l10n.recurringEditScopeThisOnly),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(_SeriesScope.thisAndFuture),
+            child: Text(l10n.recurringEditScopeThisAndFuture),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// "This and future": cap the current rule the day before this occurrence,
+  /// remove this occurrence, then open a replacement rule (prefilled) starting
+  /// here — it regenerates this occurrence and all future ones with the edited
+  /// parameters. Already-generated PAST occurrences are never touched (§8.4).
+  Future<void> _editThisAndFuture(Transaction txn) async {
+    final RecurringRepository recurringRepo = ref.read(
+      recurringRepositoryProvider,
+    );
+    final RecurringRule? rule = await recurringRepo.findRule(
+      txn.recurringRuleId!,
+    );
+    if (rule == null || !mounted) {
+      return;
+    }
+    final DateTime occurrenceDate = AppDate.dateOnly(txn.valueDate);
+    await recurringRepo.setEndDate(
+      rule.id,
+      occurrenceDate.subtract(const Duration(days: 1)),
+    );
+    await ref
+        .read(transactionRepositoryProvider)
+        .deleteTransaction(txn.id);
+    if (!mounted) {
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => RecurringRuleFormPage.replacing(
+          template: rule,
+          startDate: occurrenceDate,
+        ),
       ),
     );
   }
@@ -257,6 +351,9 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
     );
   }
 }
+
+/// The user's choice in the recurring series-edit dialog.
+enum _SeriesScope { thisOnly, thisAndFuture }
 
 /// Pinned, opaque section header for a date group. Fixed-height so `minExtent ==
 /// maxExtent` (no resize on scroll); its opaque background occludes rows sliding

@@ -4,6 +4,7 @@ import '../../data/models/category.dart';
 import '../../data/models/mappers/account_mapper.dart';
 import '../../data/models/mappers/category_mapper.dart';
 import '../../data/models/mappers/wallet_mapper.dart';
+import '../../data/models/recurring_rule.dart';
 import '../../data/models/transaction.dart';
 import '../../data/models/wallet.dart';
 import 'undoable_action.dart';
@@ -266,4 +267,33 @@ class DeleteTransferAction extends UndoableAction {
   @override
   Future<void> commit(AppDatabase db) =>
       db.transactionDao.deleteTransferGroup(transferGroupId);
+}
+
+/// Deletes a recurring rule after the undo window (Phase 10). Always
+/// hard-deletable: [commit] first detaches every transaction the rule generated
+/// (clears their `recurringRuleId`) so the FK reference is released and the
+/// already-generated rows survive as ordinary transactions, then deletes the
+/// rule (its category links cascade). Runs inside `UndoService`'s transaction.
+class DeleteRecurringRuleAction extends UndoableAction {
+  const DeleteRecurringRuleAction({required this.rule, required this.label});
+
+  final RecurringRule rule;
+
+  @override
+  final String label;
+
+  @override
+  EntityRef get target => EntityRef(UndoEntityType.recurringRule, rule.id);
+
+  @override
+  UndoEffect get effect => const DeleteEffect();
+
+  @override
+  Future<bool> canCommit(AppDatabase db) async => true;
+
+  @override
+  Future<void> commit(AppDatabase db) async {
+    await db.transactionDao.detachAllFromRecurringRule(rule.id);
+    await db.recurringDao.deleteRule(rule.id);
+  }
 }

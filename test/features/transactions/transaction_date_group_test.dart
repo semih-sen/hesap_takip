@@ -17,6 +17,7 @@ TransactionListRow rowOn(int id, DateTime date) => TransactionListRow(
   walletName: 'Cüzdan',
   valueDate: date,
   accentColorValue: 0xFFFF6B6B,
+  accountColorValue: 0xFF5B8DEF,
 );
 
 void main() {

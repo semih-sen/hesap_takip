@@ -47,6 +47,7 @@ class TransactionListRow {
     required this.walletName,
     required this.valueDate,
     required this.accentColorValue,
+    required this.accountColorValue,
     this.note,
     this.payee,
     this.categories = const <CategoryChipData>[],
@@ -69,7 +70,14 @@ class TransactionListRow {
   final DateTime valueDate;
 
   /// ARGB int: the primary category color, else the type's semantic accent.
+  /// Drives the row's tinted background only.
   final int accentColorValue;
+
+  /// ARGB int: the owning **account**'s color (`Wallet.accountId →
+  /// Account.colorValue`). Drives the left stripe only — sourced independently
+  /// of [accentColorValue] so the stripe says *which account* and the tint says
+  /// *which category/type*.
+  final int accountColorValue;
   final String? note;
   final String? payee;
 
@@ -115,6 +123,7 @@ TransactionListRow _toRow(TransactionListRowData d) {
     walletName: d.walletName,
     valueDate: d.valueDate,
     accentColorValue: primary?.colorValue ?? _accentForType(d.type),
+    accountColorValue: d.accountColorValue,
     note: d.note,
     payee: d.payee,
     categories: <CategoryChipData>[

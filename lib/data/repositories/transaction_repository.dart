@@ -96,6 +96,10 @@ abstract interface class TransactionRepository {
 
   /// Hard-deletes the transaction (cascades its category links).
   Future<void> deleteTransaction(int id);
+
+  /// Detaches a generated transaction from its recurring rule (series-edit "this
+  /// occurrence only"): clears `recurringRuleId` so it becomes a one-off.
+  Future<void> detachFromRecurringRule(int id);
 }
 
 class DriftTransactionRepository implements TransactionRepository {
@@ -289,6 +293,10 @@ class DriftTransactionRepository implements TransactionRepository {
   @override
   Future<void> deleteTransaction(int id) =>
       _db.transactionDao.deleteTransaction(id);
+
+  @override
+  Future<void> detachFromRecurringRule(int id) =>
+      _db.transactionDao.detachFromRecurringRule(id);
 
   /// Builds the junction-row companions for [links].
   ///
