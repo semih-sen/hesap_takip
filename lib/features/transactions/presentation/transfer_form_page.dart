@@ -6,10 +6,13 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/currency/amount_parsing.dart';
 import '../../../core/currency/currency_service.dart';
 import '../../../core/date/app_date.dart';
+import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
 import '../../../data/models/wallet.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../accounts/application/accounts_providers.dart';
 import '../../wallets/application/wallets_providers.dart';
+import '../services/balance_service.dart';
 import '../services/transfer_service.dart';
 
 /// Create/edit a two-leg transfer (PROJECT_PLAN §5.2 / Phase 8).
@@ -300,6 +303,12 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
     final bool cross = _crossCurrency(wallets);
     final Wallet? from = _walletById(wallets, _fromWalletId);
     final Wallet? to = _walletById(wallets, _toWalletId);
+    final Map<int, String> accountNames = <int, String>{
+      for (final Account a
+          in ref.watch(accountsStreamProvider).asData?.value ??
+              const <Account>[])
+        a.id: a.name,
+    };
 
     return Form(
       key: _formKey,
@@ -308,12 +317,13 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
         children: <Widget>[
           DropdownButtonFormField<int>(
             initialValue: _fromWalletId,
+            isExpanded: true,
             decoration: InputDecoration(labelText: l10n.transferFromLabel),
             items: <DropdownMenuItem<int>>[
               for (final Wallet w in wallets)
                 DropdownMenuItem<int>(
                   value: w.id,
-                  child: Text('${w.name} (${w.currencyCode})'),
+                  child: _walletLabel(w, accountNames),
                 ),
             ],
             validator: (int? v) => v == null ? l10n.validationRequired : null,
@@ -330,6 +340,7 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
           const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<int>(
             initialValue: _toWalletId,
+            isExpanded: true,
             decoration: InputDecoration(labelText: l10n.transferToLabel),
             items: <DropdownMenuItem<int>>[
               for (final Wallet w in wallets)
@@ -337,7 +348,7 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
                   value: w.id,
                   // The source wallet cannot also be the destination.
                   enabled: w.id != _fromWalletId,
-                  child: Text('${w.name} (${w.currencyCode})'),
+                  child: _walletLabel(w, accountNames),
                 ),
             ],
             validator: (int? v) {
@@ -414,6 +425,21 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
         ],
       ),
     );
+  }
+
+  /// A dropdown label for [w]: "Hesap / Cüzdan (TRY) · ₺1.234,56". The live
+  /// balance (wallet's own currency) is appended once loaded; while loading it is
+  /// simply omitted so the dropdown never blocks (§D.4).
+  Widget _walletLabel(Wallet w, Map<int, String> accountNames) {
+    final String account = accountNames[w.accountId] ?? '';
+    final String head = '$account / ${w.name} (${w.currencyCode})';
+    final AsyncValue<int> balance = ref.watch(walletBalanceProvider(w.id));
+    final String label = balance.maybeWhen(
+      data: (int minor) =>
+          '$head · ${_currency.format(minor, w.currencyCode)}',
+      orElse: () => head,
+    );
+    return Text(label, maxLines: 1, overflow: TextOverflow.ellipsis);
   }
 
   String? _positiveAmountValidator(AppLocalizations l10n, String? value) {

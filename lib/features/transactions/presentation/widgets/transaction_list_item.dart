@@ -88,7 +88,7 @@ class TransactionListItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      // Row 1: title + amount.
+                      // Row 1: title + (pending badge) + amount.
                       Row(
                         children: <Widget>[
                           Expanded(
@@ -100,6 +100,19 @@ class TransactionListItem extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
+                          // Pending borç/alacak badge lives here (§D.2) so Row 3
+                          // is free to always show categories.
+                          if (row.isPending &&
+                              (row.type == TransactionType.income ||
+                                  row.type == TransactionType.expense)) ...<Widget>[
+                            _PendingBadge(
+                              row: row,
+                              theme: theme,
+                              semantic: semantic,
+                              l10n: l10n,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                          ],
                           Text(
                             amountText,
                             style: theme.textTheme.titleMedium?.copyWith(
@@ -177,15 +190,10 @@ class TransactionListItem extends StatelessWidget {
     AppSemanticColors semantic,
     AppLocalizations l10n,
   ) {
-    // 1) Pending (future-dated / overdue) income or expense → borç/alacak chip
-    //    with the due date, plus a "Gecikmiş" emphasis when overdue (§5.1).
-    if (row.isPending &&
-        (row.type == TransactionType.income ||
-            row.type == TransactionType.expense)) {
-      return _PendingMeta(row: row, theme: theme, semantic: semantic, l10n: l10n);
-    }
+    // The pending borç/alacak badge now lives in Row 1 (§D.2), so Row 3 is free
+    // to always show categories. Priority: transfer > recurring > categories.
 
-    // 2) Transfer → counter-wallet (Phase 8): renders only when present.
+    // 1) Transfer → counter-wallet (Phase 8): renders only when present.
     final String? counter = row.counterWalletName;
     if (row.type == TransactionType.transfer && counter != null) {
       return _MetaChip(
@@ -196,7 +204,7 @@ class TransactionListItem extends StatelessWidget {
       );
     }
 
-    // 3) Recurring-generated → "Tekrarlayan" chip (Phase 10).
+    // 2) Recurring-generated → "Tekrarlayan" chip (Phase 10).
     if (row.isRecurring) {
       return _MetaChip(
         icon: Icons.repeat,
@@ -206,7 +214,7 @@ class TransactionListItem extends StatelessWidget {
       );
     }
 
-    // 4) The common case → category chips.
+    // 3) The common case → category chips.
     if (row.categories.isNotEmpty) {
       return _categoryChips(theme, semantic);
     }
@@ -318,10 +326,12 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-/// Row-3 for a pending (borç/alacak) item: a colored pill + due date, with a
-/// "Gecikmiş" emphasis when overdue. Pure presentational — reads only row flags.
-class _PendingMeta extends StatelessWidget {
-  const _PendingMeta({
+/// A compact Row-1 pill marking a pending borç/alacak item (§D.2). Same pill
+/// language as the category chip. An overdue item prepends a warning icon and is
+/// wrapped in a `Semantics`/`Tooltip` label ("Gecikmiş") — the due date is not
+/// repeated here (Row 2 already shows the value date). Pure presentational.
+class _PendingBadge extends StatelessWidget {
+  const _PendingBadge({
     required this.row,
     required this.theme,
     required this.semantic,
@@ -340,45 +350,37 @@ class _PendingMeta extends StatelessWidget {
     final String label = isIncome
         ? l10n.pendingChipReceivable
         : l10n.pendingChipDebt;
-    final String due = l10n.pendingDue(
-      DateFormat('d MMM yyyy', 'tr_TR').format(row.valueDate),
-    );
-    return Row(
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-          decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.14),
-            borderRadius: AppRadius.pillAll,
-          ),
-          child: Text(
+    final Widget pill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.14),
+        borderRadius: AppRadius.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (row.isOverdue) ...<Widget>[
+            Icon(Icons.error_outline, size: 12, color: accent),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
               color: accent,
               fontWeight: FontWeight.w700,
             ),
           ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Flexible(
-          child: Text(
-            due,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(color: semantic.textMuted),
-          ),
-        ),
-        if (row.isOverdue) ...<Widget>[
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            l10n.pendingOverdue,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: semantic.expense,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ],
-      ],
+      ),
+    );
+    if (!row.isOverdue) {
+      return pill;
+    }
+    // Convey "Gecikmiş" to assistive tech + on long-press, without spending Row-1
+    // horizontal room on the text label.
+    return Tooltip(
+      message: l10n.pendingOverdue,
+      child: Semantics(label: l10n.pendingOverdue, child: pill),
     );
   }
 }

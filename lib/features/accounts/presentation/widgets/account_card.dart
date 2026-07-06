@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/currency/currency_service.dart';
 import '../../../../core/undo/entity_actions.dart';
 import '../../../../core/undo/undo_service.dart';
 import '../../../../data/models/account.dart';
 import '../../../../data/models/wallet.dart';
 import '../../../../data/repositories/account_repository.dart';
+import '../../../../data/repositories/settings_repository.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../shared/appearance.dart';
 import '../../../shared/entity_labels.dart';
 import '../../../shared/undo_snackbar.dart';
+import '../../../transactions/services/balance_service.dart';
 import '../../../wallets/application/wallets_providers.dart';
 import '../../../wallets/presentation/wallet_form_page.dart';
 import '../../../wallets/presentation/widgets/wallet_tile.dart';
@@ -115,7 +118,13 @@ class AccountCard extends ConsumerWidget {
                     ],
                   ],
                 ),
-                subtitle: Text(accountTypeLabel(l10n, account.type)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(accountTypeLabel(l10n, account.type)),
+                    _AccountTotal(accountId: account.id),
+                  ],
+                ),
                 trailing: PopupMenuButton<_AccountMenu>(
                   onSelected: (_AccountMenu value) {
                     switch (value) {
@@ -188,3 +197,37 @@ class AccountCard extends ConsumerWidget {
 }
 
 enum _AccountMenu { edit, addWallet, archive, delete }
+
+/// The account's aggregate balance across its non-archived wallets, converted to
+/// the base currency (§D.5). Labeled so it reads as a converted total, not a
+/// same-currency sum. Mirrors `WalletTile`'s loading/error fallbacks.
+class _AccountTotal extends ConsumerWidget {
+  const _AccountTotal({required this.accountId});
+
+  final int accountId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String base = ref.watch(baseCurrencyProvider);
+    final AsyncValue<int> total = ref.watch(
+      accountTotalBalanceProvider(accountId),
+    );
+    final ThemeData theme = Theme.of(context);
+    return total.when(
+      data: (int minor) => Text(
+        l10n.accountTotalLabel(const CurrencyService().format(minor, base)),
+        style: theme.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+      loading: () => const SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      error: (_, _) => const Text('—'),
+    );
+  }
+}

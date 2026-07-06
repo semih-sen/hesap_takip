@@ -157,41 +157,75 @@ void main() {
     );
   });
 
-  testWidgets('pending expense shows the Borç chip; overdue adds Gecikmiş', (
-    WidgetTester tester,
-  ) async {
-    await pumpRow(
-      tester,
-      row(
-        title: 'Kira',
-        type: TransactionType.expense,
-        flow: FlowDirection.outflow,
-        status: TransactionStatus.pending,
-        isPending: true,
-        isOverdue: true,
-      ),
-    );
-    expect(find.text('Borç'), findsOneWidget);
-    expect(find.text('Gecikmiş'), findsOneWidget);
-    expect(find.text('Alacak'), findsNothing);
-  });
+  testWidgets(
+    'pending expense shows the Borç badge; overdue adds the warning icon + '
+    'Gecikmiş semantics (not visible text)',
+    (WidgetTester tester) async {
+      await pumpRow(
+        tester,
+        row(
+          title: 'Kira',
+          type: TransactionType.expense,
+          flow: FlowDirection.outflow,
+          status: TransactionStatus.pending,
+          isPending: true,
+          isOverdue: true,
+        ),
+      );
+      expect(find.text('Borç'), findsOneWidget);
+      expect(find.text('Alacak'), findsNothing);
+      // "Gecikmiş" is now an icon + tooltip/semantics label, not on-screen text.
+      expect(find.text('Gecikmiş'), findsNothing);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.byTooltip('Gecikmiş'), findsOneWidget);
+    },
+  );
 
-  testWidgets('pending income shows the Alacak chip; not-overdue hides Gecikmiş', (
-    WidgetTester tester,
-  ) async {
-    await pumpRow(
-      tester,
-      row(
-        title: 'Maaş',
-        type: TransactionType.income,
-        flow: FlowDirection.inflow,
-        status: TransactionStatus.pending,
-        isPending: true,
-      ),
-    );
-    expect(find.text('Alacak'), findsOneWidget);
-    expect(find.text('Gecikmiş'), findsNothing);
-  });
+  testWidgets(
+    'pending income shows the Alacak badge; not-overdue hides the warning icon',
+    (WidgetTester tester) async {
+      await pumpRow(
+        tester,
+        row(
+          title: 'Maaş',
+          type: TransactionType.income,
+          flow: FlowDirection.inflow,
+          status: TransactionStatus.pending,
+          isPending: true,
+        ),
+      );
+      expect(find.text('Alacak'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a pending expense WITH categories shows the Row-1 badge AND Row-3 chips',
+    (WidgetTester tester) async {
+      await pumpRow(
+        tester,
+        row(
+          title: 'Kira',
+          type: TransactionType.expense,
+          flow: FlowDirection.outflow,
+          status: TransactionStatus.pending,
+          isPending: true,
+          isOverdue: true,
+          categories: const <CategoryChipData>[
+            CategoryChipData(id: 1, name: 'Ev', colorValue: 0xFFF5A623),
+            CategoryChipData(id: 2, name: 'Fatura', colorValue: 0xFF5B8DEF),
+          ],
+        ),
+      );
+      // Row-1 pending badge...
+      expect(find.text('Borç'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      // ...AND Row-3 category chips (the bug §D.2 fixes: chips now show for
+      // pending rows).
+      expect(find.text('Ev'), findsOneWidget);
+      expect(find.text('Fatura'), findsOneWidget);
+    },
+  );
 
   testWidgets('transfer counter-wallet (fixture)', (WidgetTester tester) async {
     await pumpRow(

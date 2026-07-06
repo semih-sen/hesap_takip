@@ -118,12 +118,20 @@ void main() {
           CategoryChipData(id: 3, name: 'Ev', colorValue: 0xFF5B8DEF),
         ],
       ),
-      // 2: pending overdue borç.
+      // 2: pending overdue borç (badge now in Row 1; Row 3 empty).
       row(isPending: true, isOverdue: true),
       // 3: transfer counter-wallet.
       row(type: TransactionType.transfer, counterWalletName: 'Birikim'),
       // 4: recurring chip.
       row(isRecurring: true),
+      // 5: pending WITH categories — badge in Row 1 AND chips in Row 3 (§D.2).
+      row(
+        isPending: true,
+        isOverdue: true,
+        categories: const <CategoryChipData>[
+          CategoryChipData(id: 9, name: 'Ev', colorValue: 0xFFF5A623),
+        ],
+      ),
     ];
     // Distinct ids so ValueKey is unique.
     final List<TransactionListRow> keyed = <TransactionListRow>[
@@ -161,4 +169,37 @@ void main() {
       );
     }
   });
+
+  testWidgets(
+    'a pending row shows the badge in Row 1, keeps Row-3 for categories, and '
+    'no longer repeats the due date (§D.2)',
+    (WidgetTester tester) async {
+      final TransactionListRow pending = row(
+        isPending: true,
+        isOverdue: true,
+        categories: const <CategoryChipData>[
+          CategoryChipData(id: 1, name: 'Kira', colorValue: 0xFFF5A623),
+        ],
+      );
+      await tester.pumpWidget(wrap(<TransactionListRow>[pending]));
+      await tester.pumpAndSettle();
+
+      // Badge (Borç) + its overdue icon are present; category chip shows in Row 3.
+      expect(find.text('Borç'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Kira'), findsOneWidget);
+      // The old "Vade: …" due-date line is gone (Row 2 already shows the date).
+      // (Guard against matching the wallet name "Vadesiz" — check the colon.)
+      expect(find.textContaining('Vade:'), findsNothing);
+
+      // Same fixed height as a plain completed row.
+      final double pendingHeight =
+          tester.getSize(find.byType(TransactionListItem)).height;
+      await tester.pumpWidget(wrap(<TransactionListRow>[row()]));
+      await tester.pumpAndSettle();
+      final double plainHeight =
+          tester.getSize(find.byType(TransactionListItem)).height;
+      expect(pendingHeight, plainHeight);
+    },
+  );
 }

@@ -42,9 +42,10 @@ abstract class TransactionFilter with _$TransactionFilter {
   factory TransactionFilter.initial() => const TransactionFilter();
 
   /// Whether any predicate is narrowing the list (drives the app-bar filter
-  /// badge). A blank/whitespace-only search does not count as active.
+  /// badge). A blank/whitespace-only search does not count as active. [range] is
+  /// intentionally EXCLUDED: it is driven by the always-on List period control
+  /// (§C.3), not the filter sheet, so it must not permanently light the badge.
   bool get isActive =>
-      range != null ||
       walletIds.isNotEmpty ||
       categoryIds.isNotEmpty ||
       type != null ||

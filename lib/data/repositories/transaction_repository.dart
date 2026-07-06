@@ -45,6 +45,7 @@ abstract interface class TransactionRepository {
   Stream<List<TransactionListRowData>> watchTransactionRows(
     TransactionFilter filter, {
     required int limit,
+    bool carryForwardOverdue = false,
   });
 
   /// Reactive 9-cell base-currency [SummaryData] over [walletIds] for [period]
@@ -119,7 +120,12 @@ class DriftTransactionRepository implements TransactionRepository {
   Stream<List<TransactionListRowData>> watchTransactionRows(
     TransactionFilter filter, {
     required int limit,
-  }) => _db.transactionDao.watchTransactionRows(filter, limit: limit);
+    bool carryForwardOverdue = false,
+  }) => _db.transactionDao.watchTransactionRows(
+    filter,
+    limit: limit,
+    carryForwardOverdue: carryForwardOverdue,
+  );
 
   static const CurrencyService _currency = CurrencyService();
 

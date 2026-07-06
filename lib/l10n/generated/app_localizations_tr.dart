@@ -621,4 +621,111 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get recurringEditScopeThisAndFuture => 'Bu ve gelecekteki işlemler';
+
+  @override
+  String get listOverdueCarriedNotice => 'Gecikmiş işlemler de gösteriliyor';
+
+  @override
+  String accountTotalLabel(String amount) {
+    return 'Toplam: $amount';
+  }
+
+  @override
+  String get actionContinue => 'Devam et';
+
+  @override
+  String get actionClose => 'Kapat';
+
+  @override
+  String get settingsBaseCurrencyLabel => 'Ana para birimi';
+
+  @override
+  String get settingsFirstDayOfWeekLabel => 'Haftanın ilk günü';
+
+  @override
+  String get settingsFirstDayMonday => 'Pazartesi';
+
+  @override
+  String get settingsFirstDaySunday => 'Pazar';
+
+  @override
+  String get settingsExchangeRatesLabel => 'Döviz kurları';
+
+  @override
+  String get settingsExchangeRatesSubtitle =>
+      'Kayıtlı kurları görüntüle ve düzenle';
+
+  @override
+  String get settingsBackupLabel => 'Yedekleme';
+
+  @override
+  String get settingsBackupExport => 'Yedek al';
+
+  @override
+  String get settingsBackupImport => 'Yedeği geri yükle';
+
+  @override
+  String get settingsSectionGeneral => 'Genel';
+
+  @override
+  String get baseCurrencyChangeWarningTitle => 'Ana para birimini değiştir';
+
+  @override
+  String get baseCurrencyChangeWarningBody =>
+      'Geçmiş işlemler, kaydedildikleri kur ve ana para birimi tutarıyla kalır; hiçbiri yeniden hesaplanmaz. Yalnızca bundan sonraki yeni işlemler yeni ana para birimine göre kaydedilir. Bu nedenle değişiklik tarihini kapsayan raporlar, eski ve yeni para birimine göre dönüştürülmüş tutarları birlikte gösterebilir.';
+
+  @override
+  String get exchangeRatesTitle => 'Döviz kurları';
+
+  @override
+  String get exchangeRateAdd => 'Kur ekle';
+
+  @override
+  String get exchangeRatesEmpty => 'Kayıtlı kur yok';
+
+  @override
+  String get exchangeRateFromLabel => 'Kaynak para birimi';
+
+  @override
+  String get exchangeRateToLabel => 'Hedef para birimi';
+
+  @override
+  String get exchangeRateValueLabel => 'Kur';
+
+  @override
+  String get exchangeRateDateLabel => 'Tarih';
+
+  @override
+  String get exchangeRateSameCurrency =>
+      'Kaynak ve hedef para birimi farklı olmalı.';
+
+  @override
+  String get exchangeRateDeleteTitle => 'Kuru sil';
+
+  @override
+  String get exchangeRateDeleteBody => 'Bu kur kaydı silinsin mi?';
+
+  @override
+  String get backupImportWarningTitle => 'Yedeği geri yükle';
+
+  @override
+  String get backupImportWarningBody =>
+      'Bu işlem mevcut tüm verilerinizin üzerine yazacaktır. Bu işlem geri alınamaz. Emin misiniz?';
+
+  @override
+  String get backupImportSuccessTitle => 'Geri yükleme tamamlandı';
+
+  @override
+  String get backupImportSuccessBody =>
+      'Değişikliklerin tamamının uygulanması için lütfen uygulamayı kapatıp yeniden açın.';
+
+  @override
+  String get backupImportInvalid =>
+      'Geçersiz veya desteklenmeyen yedek dosyası.';
+
+  @override
+  String get backupExportSuccess => 'Yedek dosyası oluşturuldu.';
+
+  @override
+  String get backupError => 'Bir hata oluştu.';
 }

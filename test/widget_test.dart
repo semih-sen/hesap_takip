@@ -57,9 +57,10 @@ void main() {
     // (Phase 5), identified by its add-transaction FAB.
     expect(find.text('İşlem ekle'), findsOneWidget);
 
-    // Navigation switches between screens (Settings is safe — no DB).
+    // Navigation switches between screens. The real Settings screen (Phase 11)
+    // shows the base-currency row.
     await tester.tap(find.text('Ayarlar'));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.settings_outlined), findsWidgets);
+    expect(find.text('Ana para birimi'), findsWidgets);
   });
 }

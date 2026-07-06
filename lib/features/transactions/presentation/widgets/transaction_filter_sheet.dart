@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../core/date/app_date.dart';
-import '../../../../core/date/date_range.dart';
 import '../../../../data/database/tables/enums.dart';
 import '../../../../data/models/category.dart';
 import '../../../../data/models/transaction_filter.dart';
@@ -56,22 +53,6 @@ class _TransactionFilterSheetState
 
   TransactionListFilter get _notifier =>
       ref.read(transactionListFilterProvider.notifier);
-
-  Future<void> _pickRange(DateRange? current) async {
-    final DateTime now = AppDate.today();
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(now.year + 1, 12, 31),
-      initialDateRange: current == null
-          ? null
-          : DateTimeRange(start: current.start, end: current.end),
-      locale: const Locale('tr'),
-    );
-    if (picked != null) {
-      _notifier.setDateRange(DateRange(start: picked.start, end: picked.end));
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,32 +115,8 @@ class _TransactionFilterSheetState
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // ----- Date range -----
-            _SectionLabel(l10n.filterDateRangeLabel),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _pickRange(filter.range),
-                    icon: const Icon(Icons.date_range),
-                    label: Text(
-                      filter.range == null
-                          ? l10n.filterDateRangeAll
-                          : _formatRange(filter.range!),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                if (filter.range != null)
-                  IconButton(
-                    tooltip: l10n.filterClear,
-                    icon: const Icon(Icons.clear),
-                    onPressed: () => _notifier.setDateRange(null),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
+            // NB: the date range is no longer a filter facet — it is driven by
+            // the always-on List period control on the dashboard (§C.3).
 
             // ----- Type -----
             _SectionLabel(l10n.filterTypeLabel),
@@ -266,11 +223,6 @@ class _TransactionFilterSheetState
       next.remove(id);
     }
     return next;
-  }
-
-  static String _formatRange(DateRange range) {
-    final DateFormat fmt = DateFormat('d MMM yyyy', 'tr_TR');
-    return '${fmt.format(range.start)} – ${fmt.format(range.end)}';
   }
 }
 

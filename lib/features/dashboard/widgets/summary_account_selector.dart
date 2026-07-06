@@ -53,6 +53,10 @@ class SummaryAccountSelector extends ConsumerWidget {
             FilterChip(
               label: Text(account.name),
               selected: selection.contains(account.id),
+              // A slightly-thicker border in the account's own color so the
+              // chips read as belonging to their accounts (§D.1). The "Tümü"
+              // chip above keeps the default theme border (it has no color).
+              side: BorderSide(color: Color(account.colorValue), width: 1.5),
               onSelected: (_) => notifier.toggle(account.id),
             ),
             const SizedBox(width: AppSpacing.sm),

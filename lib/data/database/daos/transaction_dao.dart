@@ -459,16 +459,34 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
   Stream<List<TransactionListRowData>> watchTransactionRows(
     TransactionFilter filter, {
     required int limit,
+    bool carryForwardOverdue = false,
   }) {
     final List<String> where = <String>[];
     final List<Variable> vars = <Variable>[];
 
     final DateRange? range = filter.range;
     if (range != null) {
-      // value_date is ISO 'yyyy-MM-dd' text, so lexical compare == chronological.
-      where.add('t.value_date >= ? AND t.value_date <= ?');
-      vars.add(Variable.withString(_dateOnly.toSql(range.start)));
-      vars.add(Variable.withString(_dateOnly.toSql(range.end)));
+      if (carryForwardOverdue) {
+        // Rows in the period OR overdue pending items dated BEFORE it (§C.4).
+        // This MUST be one fully-parenthesized clause: it is AND'd with every
+        // other facet, and OR binds looser than AND — dropping the outer parens
+        // would silently break every other filter. An explicit `status` facet
+        // (added separately below) still excludes carried-forward pending rows,
+        // since a row can't be both `status = <other>` and `status = pending`.
+        where.add(
+          '((t.value_date >= ? AND t.value_date <= ?) '
+          'OR (t.status = ? AND t.value_date < ?))',
+        );
+        vars.add(Variable.withString(_dateOnly.toSql(range.start)));
+        vars.add(Variable.withString(_dateOnly.toSql(range.end)));
+        vars.add(Variable.withInt(TransactionStatus.pending.index));
+        vars.add(Variable.withString(_dateOnly.toSql(range.start)));
+      } else {
+        // value_date is ISO 'yyyy-MM-dd' text, so lexical compare == chronological.
+        where.add('t.value_date >= ? AND t.value_date <= ?');
+        vars.add(Variable.withString(_dateOnly.toSql(range.start)));
+        vars.add(Variable.withString(_dateOnly.toSql(range.end)));
+      }
     }
     if (filter.walletIds.isNotEmpty) {
       final List<int> ids = filter.walletIds.toList();

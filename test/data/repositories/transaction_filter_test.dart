@@ -96,7 +96,135 @@ void main() {
   Future<List<TransactionListRowData>> query(
     TransactionFilter filter, {
     int limit = 1000,
-  }) => repo.watchTransactionRows(filter, limit: limit).first;
+    bool carryForwardOverdue = false,
+  }) => repo
+      .watchTransactionRows(
+        filter,
+        limit: limit,
+        carryForwardOverdue: carryForwardOverdue,
+      )
+      .first;
+
+  group('overdue carry-forward (§C.4)', () {
+    // "Current" period = July 2026; a pending item overdue from June 2026.
+    final DateRange july = DateRange(
+      start: DateTime(2026, 7, 1),
+      end: DateTime(2026, 7, 31),
+    );
+
+    Future<(int, int)> seedOverdueAndCurrent(int w) async {
+      final int overdue = await seedTxn(
+        w,
+        status: TransactionStatus.pending,
+        valueDate: DateTime(2026, 6, 15), // before the period
+      );
+      final int current = await seedTxn(
+        w,
+        status: TransactionStatus.completed,
+        valueDate: DateTime(2026, 7, 10), // in the period
+      );
+      return (overdue, current);
+    }
+
+    test('carryForwardOverdue: true returns the period row AND the overdue one',
+        () async {
+      final int a = await seedAccount();
+      final int w = await seedWallet(a);
+      await seedOverdueAndCurrent(w);
+
+      final List<TransactionListRowData> rows = await query(
+        TransactionFilter(range: july),
+        carryForwardOverdue: true,
+      );
+      expect(rows.length, 2);
+      expect(
+        rows.map((TransactionListRowData r) => r.valueDate).toSet(),
+        <DateTime>{DateTime(2026, 6, 15), DateTime(2026, 7, 10)},
+      );
+    });
+
+    test('carryForwardOverdue: false returns ONLY the in-period row', () async {
+      final int a = await seedAccount();
+      final int w = await seedWallet(a);
+      await seedOverdueAndCurrent(w);
+
+      final List<TransactionListRowData> rows = await query(
+        TransactionFilter(range: july),
+      );
+      expect(rows.length, 1);
+      expect(rows.single.valueDate, DateTime(2026, 7, 10));
+    });
+
+    test('only PENDING rows before the period carry forward, not completed',
+        () async {
+      final int a = await seedAccount();
+      final int w = await seedWallet(a);
+      // A COMPLETED row before the period must NOT be carried forward.
+      await seedTxn(
+        w,
+        status: TransactionStatus.completed,
+        valueDate: DateTime(2026, 6, 15),
+      );
+      await seedTxn(
+        w,
+        status: TransactionStatus.completed,
+        valueDate: DateTime(2026, 7, 10),
+      );
+
+      final List<TransactionListRowData> rows = await query(
+        TransactionFilter(range: july),
+        carryForwardOverdue: true,
+      );
+      expect(rows.length, 1);
+      expect(rows.single.valueDate, DateTime(2026, 7, 10));
+    });
+
+    test(
+      'an explicit status:completed filter suppresses carried pending rows '
+      '(AND/OR precedence guard)',
+      () async {
+        final int a = await seedAccount();
+        final int w = await seedWallet(a);
+        await seedOverdueAndCurrent(w); // overdue is pending, current completed
+
+        final List<TransactionListRowData> rows = await query(
+          TransactionFilter(
+            range: july,
+            status: TransactionStatus.completed,
+          ),
+          carryForwardOverdue: true,
+        );
+        // The carried pending row is excluded by the top-level status = completed
+        // predicate; only the completed in-period row survives. If the OR clause
+        // weren't fully parenthesized, this would wrongly return both.
+        expect(rows.length, 1);
+        expect(rows.single.status, TransactionStatus.completed);
+        expect(rows.single.valueDate, DateTime(2026, 7, 10));
+      },
+    );
+
+    test('the flag is purely mechanical: a past-range query still carries '
+        'earlier pending rows', () async {
+      final int a = await seedAccount();
+      final int w = await seedWallet(a);
+      // Pending in May, "period" = June (a past month not containing today).
+      await seedTxn(
+        w,
+        status: TransactionStatus.pending,
+        valueDate: DateTime(2026, 5, 20),
+      );
+      final DateRange june = DateRange(
+        start: DateTime(2026, 6, 1),
+        end: DateTime(2026, 6, 30),
+      );
+      final List<TransactionListRowData> rows = await query(
+        TransactionFilter(range: june),
+        carryForwardOverdue: true,
+      );
+      // DAO honors the flag regardless of whether the range contains today.
+      expect(rows.single.valueDate, DateTime(2026, 5, 20));
+    });
+  });
 
   test(
     'row.accountColorValue is the owning account color, not the category color',

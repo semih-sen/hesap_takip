@@ -1239,6 +1239,204 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Bu ve gelecekteki işlemler'**
   String get recurringEditScopeThisAndFuture;
+
+  /// Caption shown over the list when overdue pending items from before the current period are carried forward (§C.5).
+  ///
+  /// In tr, this message translates to:
+  /// **'Gecikmiş işlemler de gösteriliyor'**
+  String get listOverdueCarriedNotice;
+
+  /// Account card label for the base-currency-converted total across its wallets (§D.5).
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam: {amount}'**
+  String accountTotalLabel(String amount);
+
+  /// Confirmation button for a one-way (semantic) change.
+  ///
+  /// In tr, this message translates to:
+  /// **'Devam et'**
+  String get actionContinue;
+
+  /// Close-dialog button.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kapat'**
+  String get actionClose;
+
+  /// Settings row: the app's base currency.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ana para birimi'**
+  String get settingsBaseCurrencyLabel;
+
+  /// Settings row: first day of week.
+  ///
+  /// In tr, this message translates to:
+  /// **'Haftanın ilk günü'**
+  String get settingsFirstDayOfWeekLabel;
+
+  /// First-day-of-week option: Monday.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pazartesi'**
+  String get settingsFirstDayMonday;
+
+  /// First-day-of-week option: Sunday.
+  ///
+  /// In tr, this message translates to:
+  /// **'Pazar'**
+  String get settingsFirstDaySunday;
+
+  /// Settings row navigating to the exchange-rate screen.
+  ///
+  /// In tr, this message translates to:
+  /// **'Döviz kurları'**
+  String get settingsExchangeRatesLabel;
+
+  /// Subtitle for the exchange-rates settings row.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kayıtlı kurları görüntüle ve düzenle'**
+  String get settingsExchangeRatesSubtitle;
+
+  /// Settings section header for backup.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yedekleme'**
+  String get settingsBackupLabel;
+
+  /// Settings row: export a backup.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yedek al'**
+  String get settingsBackupExport;
+
+  /// Settings row: import/restore a backup.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yedeği geri yükle'**
+  String get settingsBackupImport;
+
+  /// Settings section header for general preferences.
+  ///
+  /// In tr, this message translates to:
+  /// **'Genel'**
+  String get settingsSectionGeneral;
+
+  /// Title of the base-currency change confirmation dialog.
+  ///
+  /// In tr, this message translates to:
+  /// **'Ana para birimini değiştir'**
+  String get baseCurrencyChangeWarningTitle;
+
+  /// Body explaining historical immutability of base currency (§6).
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçmiş işlemler, kaydedildikleri kur ve ana para birimi tutarıyla kalır; hiçbiri yeniden hesaplanmaz. Yalnızca bundan sonraki yeni işlemler yeni ana para birimine göre kaydedilir. Bu nedenle değişiklik tarihini kapsayan raporlar, eski ve yeni para birimine göre dönüştürülmüş tutarları birlikte gösterebilir.'**
+  String get baseCurrencyChangeWarningBody;
+
+  /// Exchange-rates screen title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Döviz kurları'**
+  String get exchangeRatesTitle;
+
+  /// Add-exchange-rate button / form title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kur ekle'**
+  String get exchangeRateAdd;
+
+  /// Empty state on the exchange-rates screen.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kayıtlı kur yok'**
+  String get exchangeRatesEmpty;
+
+  /// Source-currency dropdown label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaynak para birimi'**
+  String get exchangeRateFromLabel;
+
+  /// Quote-currency dropdown label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hedef para birimi'**
+  String get exchangeRateToLabel;
+
+  /// Rate value field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kur'**
+  String get exchangeRateValueLabel;
+
+  /// As-of date field label.
+  ///
+  /// In tr, this message translates to:
+  /// **'Tarih'**
+  String get exchangeRateDateLabel;
+
+  /// Validation: from and to currencies must differ.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaynak ve hedef para birimi farklı olmalı.'**
+  String get exchangeRateSameCurrency;
+
+  /// Delete-rate confirmation title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kuru sil'**
+  String get exchangeRateDeleteTitle;
+
+  /// Delete-rate confirmation body.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu kur kaydı silinsin mi?'**
+  String get exchangeRateDeleteBody;
+
+  /// Import confirmation dialog title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yedeği geri yükle'**
+  String get backupImportWarningTitle;
+
+  /// Import confirmation dialog body (destructive).
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu işlem mevcut tüm verilerinizin üzerine yazacaktır. Bu işlem geri alınamaz. Emin misiniz?'**
+  String get backupImportWarningBody;
+
+  /// Import-success dialog title.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geri yükleme tamamlandı'**
+  String get backupImportSuccessTitle;
+
+  /// Import-success dialog body asking the user to restart.
+  ///
+  /// In tr, this message translates to:
+  /// **'Değişikliklerin tamamının uygulanması için lütfen uygulamayı kapatıp yeniden açın.'**
+  String get backupImportSuccessBody;
+
+  /// Shown when the picked backup file is invalid or an unsupported version.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçersiz veya desteklenmeyen yedek dosyası.'**
+  String get backupImportInvalid;
+
+  /// SnackBar after a successful export.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yedek dosyası oluşturuldu.'**
+  String get backupExportSuccess;
+
+  /// Generic backup export/import error.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bir hata oluştu.'**
+  String get backupError;
 }
 
 class _AppLocalizationsDelegate

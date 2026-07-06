@@ -8,6 +8,7 @@ import '../transactions/presentation/transaction_form_page.dart';
 import '../transactions/presentation/transfer_form_page.dart';
 import '../recurring/presentation/recurring_rules_screen.dart';
 import '../transactions/presentation/widgets/transaction_filter_sheet.dart';
+import '../transactions/presentation/widgets/transaction_list_period_switcher.dart';
 import '../transactions/presentation/widgets/transaction_list_view.dart';
 import 'widgets/summary_account_selector.dart';
 import 'widgets/summary_card.dart';
@@ -96,6 +97,13 @@ class DashboardScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            // The List's own always-on period control (independent of the
+            // Summary period above) sits directly over the list (§C.3).
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              child: TransactionListPeriodSwitcher(),
+            ),
+            const TransactionListOverdueNotice(),
             const Expanded(child: TransactionListView()),
           ],
         ),

@@ -539,6 +539,10 @@ Stream<List<TransactionListRow>> transactionList(TransactionListRef ref) {
 
 **Enforced invariant:** `SummaryWalletSelection` and `TransactionListFilter.wallets` are separate providers. A change to the summary account selection must not read from or write to the list filter, and vice-versa. Add a widget test asserting this decoupling.
 
+**List period scope (§C.3, Phase 12).** The List has its OWN always-on period control — `TransactionListPeriod`, an independent mirror of `SummaryPeriod` (month + prev/next, Last-30-days, All-time, Custom) reusing the generic `SummaryPeriodValue`. It defaults to the current month, so the list is period-scoped from the first frame; the manual date-range filter-sheet control was removed in favor of it. Each change pushes its resolved range into `TransactionListFilter.setDateRange` (resetting the paging window and keeping `filter.range` in sync), but the SQL date bound is derived directly from `TransactionListPeriod` in `transactionList`. `TransactionListPeriod` never reads the Summary scope (the two-scope rule still holds). `TransactionFilter.range` is intentionally excluded from `isActive`, so the always-on period never lights the filter badge.
+
+**Overdue carry-forward (§C.4).** When the selected List period contains today, `transactionList` passes `carryForwardOverdue: true` to `watchTransactionRows`, which additionally surfaces pending (borç/alacak) rows dated *before* the period — so unpaid items never fall out of view. Past/future periods (not containing today) show only their own rows. The carry-forward is a single fully-parenthesized `OR` clause AND'd with every other facet, so an explicit `status` filter still excludes carried pending rows.
+
 Other providers: `appDatabaseProvider` (keepAlive), `settingsProvider`, `accountRepositoryProvider`, `walletRepositoryProvider`, `categoryRepositoryProvider`, `recurringRepositoryProvider`, `currencyServiceProvider`, plus form notifiers (`TransactionFormController`, etc.). Use `AsyncNotifier`/`StreamProvider` to bridge Drift's reactive queries.
 
 ---
@@ -553,14 +557,14 @@ Other providers: `appDatabaseProvider` (keepAlive), `settingsProvider`, `account
 
 ### 10.2 Screens
 
-1. **Dashboard** — top: Summary card (Summary scope) + account selector; below: Transaction List (List scope) with its own filter entry point.
+1. **Dashboard** — top: Summary card (Summary scope) + account selector; below: the List's own period control (`TransactionListPeriodSwitcher`, independent of the Summary period) + a "gecikmiş dahil" carry-forward notice, then the Transaction List (List scope) with its own filter entry point. The List defaults to the current month with overdue pending items carried forward (§C.3–C.5).
 2. **Transaction form** — add/edit income/expense; wallet, amount, currency+rate snapshot, valueDate, multi-select categories, note/payee.
 3. **Partial-payment views** — pending bills list; "Ödeme ekle" flow; per-bill payment history; progress.
 4. **Transfer form** — from/to wallet, amounts (auto-suggest via rate), valueDate.
 5. **Accounts & Wallets** — CRUD, archive, reorder; wallet balances.
 6. **Categories** — CRUD, hierarchical, color/icon, income/expense.
 7. **Recurring rules** — CRUD, frequency builder, autoPost toggle, series-edit dialogs.
-8. **Settings** — base currency (with historical-immutability warning), first day of week, manual exchange-rate entry, backup/export.
+8. **Settings** — base currency (with historical-immutability warning), first day of week, manual exchange-rate entry, backup/export. **Real screen as of Phase 11** (no longer a placeholder): grouped `ListTile` sections for base currency, first day of week, exchange-rate management (`ExchangeRatesScreen`), and JSON backup export/import.
 
 ### 10.3 `TransactionListItem` — the bespoke row (canonical spec)
 
@@ -645,10 +649,11 @@ Each phase below lists **Goal → Tasks → Key files → Definition of Done (Do
 - **Tasks:** recurring rules CRUD + frequency builder; `RecurringService` (§8.4) with month-end clamping, interval, end conditions, idempotency, autoPost vs pending; startup generation provider + manual "generate now"; series-edit dialogs (this only / this and future).
 - **DoD:** a monthly-on-the-31st rule generates on Feb 28/29 and back on the 31st thereafter; re-running generation never duplicates; end conditions respected; integration test covers clamping + idempotency.
 
-### Phase 11 — Settings, base currency, rates, backup
+### Phase 11 — Settings, base currency, rates, backup ✅ COMPLETE
 - **Goal:** Configuration + data safety.
 - **Tasks:** base-currency change with the historical-immutability warning (§6); manual exchange-rate entry feeding the snapshot prefill; first day of week; JSON export/import backup of the whole DB.
 - **DoD:** base currency change affects only new transactions; backup export → wipe → import round-trips all data.
+- **Implemented (§E):** real `SettingsScreen` (base currency + first-day-of-week + exchange rates + backup sections). Base-currency change is gated by a confirmation dialog explaining historical immutability; only the settings row changes (verified by test — existing snapshots untouched). `ExchangeRatesScreen` = list/add/delete cached rates (simple confirm delete, no undo). `BackupService` JSON export/import via each row's generated `toJson`/`fromJson` with a `Decimal`-aware `ValueSerializer`; import is a destructive wipe-and-replace inside one transaction with `PRAGMA foreign_keys = OFF` for the duration, preserving original primary keys, then a `foreign_key_check`. Envelope carries both `backupFormatVersion` and the DB `schemaVersion`; an unknown/newer version is rejected. Backup file IO uses `file_picker` (`saveFile`/`pickFiles`); a successful import asks the user to restart (deliberate v1 simplicity over live provider reload). No schema migration; `schemaVersion` unchanged at 2.
 
 ### Phase 12 — Polish, performance, tests, edge cases
 - **Goal:** Production readiness.
