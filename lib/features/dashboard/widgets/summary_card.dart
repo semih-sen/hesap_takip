@@ -33,7 +33,7 @@ class SummaryCard extends ConsumerWidget {
           // Tightened vertical rhythm keeps the card compact (§A.2).
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+            vertical: AppSpacing.xs,
           ),
           child: summary.when(
             loading: () => const _SummarySkeleton(),
@@ -206,8 +206,9 @@ class _BalanceCell extends StatelessWidget {
     final CrossAxisAlignment cross = hero
         ? CrossAxisAlignment.center
         : (alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start);
-    final TextAlign textAlign =
-        hero ? TextAlign.center : (alignEnd ? TextAlign.end : TextAlign.start);
+    final TextAlign textAlign = hero
+        ? TextAlign.center
+        : (alignEnd ? TextAlign.end : TextAlign.start);
     final TextStyle? valueStyle = hero
         ? theme.textTheme.titleMedium?.copyWith(
             color: color,
@@ -225,7 +226,9 @@ class _BalanceCell extends StatelessWidget {
         Text(
           label,
           textAlign: textAlign,
-          style: theme.textTheme.labelSmall?.copyWith(color: semantic.textMuted),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: semantic.textMuted,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
@@ -258,8 +261,9 @@ class _FlowCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final CrossAxisAlignment cross =
-        alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final CrossAxisAlignment cross = alignEnd
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
     final TextAlign textAlign = alignEnd ? TextAlign.end : TextAlign.start;
     return Column(
       crossAxisAlignment: cross,
@@ -307,8 +311,9 @@ class _BreakdownLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final TextStyle? labelStyle =
-        theme.textTheme.labelSmall?.copyWith(color: semantic.textMuted);
+    final TextStyle? labelStyle = theme.textTheme.labelSmall?.copyWith(
+      color: semantic.textMuted,
+    );
     final Widget separator = Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       child: Text('·', style: labelStyle),

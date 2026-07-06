@@ -55,16 +55,20 @@ void main() {
     expect(container.read(summaryAccountSelectionProvider), isEmpty);
   });
 
-  test('the Summary period scope is independent of the List filter too', () {
-    // Changing the summary period must not disturb the List filter.
+  test('mutating the Summary period scope updates the List filter range', () {
+    // Changing the summary period MUST update the List filter range.
     container.read(summaryPeriodProvider.notifier).setAllTime();
     expect(
       container.read(summaryPeriodProvider).kind,
       SummaryPeriodKind.allTime,
     );
-    expect(container.read(transactionListFilterProvider).range, isNull);
+    // Period is now globally shared, so the filter range mirrors it.
+    expect(
+      container.read(transactionListFilterProvider).range,
+      container.read(summaryPeriodProvider).range,
+    );
 
-    // And changing the List filter's date range must not disturb the period.
+    // But changing other List filter facets (like search) must not disturb the shared period.
     container.read(summaryPeriodProvider.notifier).nextMonth();
     final SummaryPeriodValue before = container.read(summaryPeriodProvider);
     container

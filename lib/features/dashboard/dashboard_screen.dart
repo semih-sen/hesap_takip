@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../transactions/application/transactions_providers.dart';
-import '../transactions/presentation/transaction_form_page.dart';
 import '../transactions/presentation/transfer_form_page.dart';
 import '../recurring/presentation/recurring_rules_screen.dart';
 import '../transactions/presentation/widgets/transaction_filter_sheet.dart';
-import '../transactions/presentation/widgets/transaction_list_period_switcher.dart';
 import '../transactions/presentation/widgets/transaction_list_view.dart';
 import 'widgets/summary_account_selector.dart';
 import 'widgets/summary_card.dart';
@@ -23,16 +21,10 @@ import 'widgets/summary_period_switcher.dart';
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
-  void _add(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const TransactionFormPage()),
-    );
-  }
-
   void _addTransfer(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const TransferFormPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const TransferFormPage()));
   }
 
   void _openRecurring(BuildContext context) {
@@ -71,37 +63,26 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _add(context),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.transactionAdd),
-      ),
       body: SafeArea(
         child: Column(
           children: <Widget>[
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm,
-                AppSpacing.lg,
-                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.xs / 1.5,
+                AppSpacing.md,
+                AppSpacing.xs / 1.5,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: const <Widget>[
                   SummaryPeriodSwitcher(),
-                  SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: AppSpacing.xs / 1.5),
                   SummaryCard(),
-                  SizedBox(height: AppSpacing.sm),
+                  SizedBox(height: AppSpacing.xs / 1.5),
                   SummaryAccountSelector(),
                 ],
               ),
-            ),
-            // The List's own always-on period control (independent of the
-            // Summary period above) sits directly over the list (§C.3).
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: TransactionListPeriodSwitcher(),
             ),
             const TransactionListOverdueNotice(),
             const Expanded(child: TransactionListView()),

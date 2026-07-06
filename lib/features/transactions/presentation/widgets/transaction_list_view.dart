@@ -14,7 +14,9 @@ import '../../../../data/repositories/transaction_repository.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../recurring/presentation/recurring_rule_form_page.dart';
 import '../../../shared/undo_snackbar.dart';
+import '../../application/summary_providers.dart';
 import '../../application/transactions_providers.dart';
+import '../../services/summary_period_value.dart';
 import '../transaction_date_group.dart';
 import '../transaction_form_page.dart';
 import '../transfer_form_page.dart';
@@ -343,7 +345,7 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
                 ],
               ),
             const SliverToBoxAdapter(
-              child: SizedBox(height: AppSpacing.xxl * 2),
+              child: SizedBox(height: 100), // Clearance for docked FAB
             ),
           ],
         );
@@ -481,6 +483,54 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A small caption shown only when overdue pending items dated BEFORE the
+/// current period are actually being carried into the visible list (§C.5).
+/// Computed client-side from the already-loaded rows — no extra query.
+class TransactionListOverdueNotice extends ConsumerWidget {
+  const TransactionListOverdueNotice({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final SummaryPeriodValue period = ref.watch(summaryPeriodProvider);
+    final DateTime start = period.range.start;
+    final bool anyCarried = ref
+        .watch(visibleTransactionsProvider)
+        .any((TransactionListRow r) => r.valueDate.isBefore(start));
+    if (!anyCarried) {
+      return const SizedBox.shrink();
+    }
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.xs,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.error_outline,
+            size: 14,
+            color: theme.colorScheme.error,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              l10n.listOverdueCarriedNotice,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall,
+            ),
+          ),
+        ],
       ),
     );
   }

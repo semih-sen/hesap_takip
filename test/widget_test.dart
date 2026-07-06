@@ -55,7 +55,7 @@ void main() {
 
     // Dashboard is the initial destination — the real transaction-list host
     // (Phase 5), identified by its add-transaction FAB.
-    expect(find.text('İşlem ekle'), findsOneWidget);
+    expect(find.byTooltip('İşlem ekle'), findsOneWidget);
 
     // Navigation switches between screens. The real Settings screen (Phase 11)
     // shows the base-currency row.

@@ -4,6 +4,7 @@ import 'package:hesap_takip/features/accounts/presentation/accounts_screen.dart'
 import 'package:hesap_takip/features/categories/categories_screen.dart';
 import 'package:hesap_takip/features/dashboard/dashboard_screen.dart';
 import 'package:hesap_takip/features/settings/settings_screen.dart';
+import 'package:hesap_takip/features/transactions/presentation/transaction_form_page.dart';
 import 'package:hesap_takip/l10n/generated/app_localizations.dart';
 
 /// Route path constants. Kept centralized so navigation is refactor-safe.
@@ -77,11 +78,23 @@ class _ScaffoldWithNavBar extends StatelessWidget {
     );
   }
 
+  void _addTransaction(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const TransactionFormPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return Scaffold(
       body: navigationShell,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _addTransaction(context),
+        tooltip: l10n.transactionAdd,
+        child: const Icon(Icons.add),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,

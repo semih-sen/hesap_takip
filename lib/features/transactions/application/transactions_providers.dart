@@ -11,6 +11,7 @@ import '../../../data/database/tables/enums.dart';
 import '../../../data/models/transaction_filter.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../services/summary_period_value.dart';
+import 'summary_providers.dart';
 
 part 'transactions_providers.g.dart';
 
@@ -170,53 +171,6 @@ class TransactionListFilter extends _$TransactionListFilter {
   void reset() => state = TransactionFilter.initial();
 }
 
-/// LIST SCOPE — the period the transaction list is browsed by (§C.3). A fully
-/// independent mirror of [SummaryPeriod] (month + prev/next, Last-30-days,
-/// All-time, Custom): it never reads the Summary scope. Defaults to the current
-/// month, so the list is period-scoped from the first frame.
-///
-/// Each mutation also pushes its resolved range into [TransactionListFilter]
-/// (`setDateRange`) so the filter row-window resets and `filter.range` stays in
-/// sync; the SQL date bound itself is derived from THIS provider in
-/// [transactionList], so scoping is correct even before the first push.
-@riverpod
-class TransactionListPeriod extends _$TransactionListPeriod {
-  @override
-  SummaryPeriodValue build() => SummaryPeriodValue.month(AppDate.today());
-
-  /// Moves to the next calendar month (endless).
-  void nextMonth() => _stepMonth(1);
-
-  /// Moves to the previous calendar month (endless).
-  void previousMonth() => _stepMonth(-1);
-
-  void _stepMonth(int delta) {
-    final DateTime base = state.kind == SummaryPeriodKind.month
-        ? state.anchor!
-        : AppDate.today();
-    _set(SummaryPeriodValue.month(DateTime(base.year, base.month + delta, 1)));
-  }
-
-  /// Switches to the 30-day window ending today.
-  void setLast30Days() =>
-      _set(SummaryPeriodValue.last30Days(AppDate.today()));
-
-  /// Switches to the all-time window.
-  void setAllTime() => _set(const SummaryPeriodValue.allTime());
-
-  /// Switches to a user-picked explicit [range].
-  void setCustomRange(DateRange range) =>
-      _set(SummaryPeriodValue.custom(range));
-
-  void _set(SummaryPeriodValue value) {
-    state = value;
-    // Push into the List filter so the paging window resets and `filter.range`
-    // mirrors the period (see the class doc). This never reads the Summary
-    // scope, so the two-scope rule holds.
-    ref.read(transactionListFilterProvider.notifier).setDateRange(value.range);
-  }
-}
-
 /// The number of pages currently loaded into the list (growing window). Resets
 /// to 1 whenever the filter OR the period changes (it `watch`es both), so
 /// narrowing the list or navigating months starts from the top rather than
@@ -226,7 +180,7 @@ class TransactionListWindow extends _$TransactionListWindow {
   @override
   int build() {
     ref.watch(transactionListFilterProvider);
-    ref.watch(transactionListPeriodProvider);
+    ref.watch(summaryPeriodProvider);
     return 1;
   }
 
@@ -240,7 +194,7 @@ class TransactionListWindow extends _$TransactionListWindow {
 @riverpod
 Stream<List<TransactionListRow>> transactionList(Ref ref) {
   final TransactionFilter filter = ref.watch(transactionListFilterProvider);
-  final SummaryPeriodValue period = ref.watch(transactionListPeriodProvider);
+  final SummaryPeriodValue period = ref.watch(summaryPeriodProvider);
   final int pageCount = ref.watch(transactionListWindowProvider);
 
   // The period is the authoritative date bound (derived here so scoping is

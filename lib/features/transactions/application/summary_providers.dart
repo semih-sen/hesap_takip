@@ -8,6 +8,7 @@ import '../../../data/repositories/transaction_repository.dart';
 import '../../wallets/application/wallets_providers.dart';
 import '../services/summary_data.dart';
 import '../services/summary_period_value.dart';
+import 'transactions_providers.dart';
 
 part 'summary_providers.g.dart';
 
@@ -56,18 +57,25 @@ class SummaryPeriod extends _$SummaryPeriod {
     final DateTime base = state.kind == SummaryPeriodKind.month
         ? state.anchor!
         : AppDate.today();
-    state = SummaryPeriodValue.month(DateTime(base.year, base.month + delta, 1));
+    _set(SummaryPeriodValue.month(DateTime(base.year, base.month + delta, 1)));
   }
 
   /// Switches to the 30-day window ending today.
-  void setLast30Days() => state = SummaryPeriodValue.last30Days(AppDate.today());
+  void setLast30Days() => _set(SummaryPeriodValue.last30Days(AppDate.today()));
 
   /// Switches to the all-time window.
-  void setAllTime() => state = const SummaryPeriodValue.allTime();
+  void setAllTime() => _set(const SummaryPeriodValue.allTime());
 
   /// Switches to a user-picked explicit [range].
   void setCustomRange(DateRange range) =>
-      state = SummaryPeriodValue.custom(range);
+      _set(SummaryPeriodValue.custom(range));
+
+  void _set(SummaryPeriodValue value) {
+    state = value;
+    // Push into the List filter so the paging window resets and `filter.range`
+    // mirrors the shared period.
+    ref.read(transactionListFilterProvider.notifier).setDateRange(value.range);
+  }
 }
 
 /// Derived, reactive 9-cell base-currency summary. Watches BOTH summary-scope

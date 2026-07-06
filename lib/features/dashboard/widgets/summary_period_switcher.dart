@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hesap_takip/app/theme/app_spacing.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/date/date_range.dart';
@@ -54,9 +55,9 @@ class SummaryPeriodSwitcher extends ConsumerWidget {
     if (picked == null) {
       return;
     }
-    ref.read(summaryPeriodProvider.notifier).setCustomRange(
-          DateRange(start: picked.start, end: picked.end),
-        );
+    ref
+        .read(summaryPeriodProvider.notifier)
+        .setCustomRange(DateRange(start: picked.start, end: picked.end));
   }
 
   @override
@@ -74,6 +75,7 @@ class SummaryPeriodSwitcher extends ConsumerWidget {
         ),
         Expanded(
           child: PopupMenuButton<_PeriodPreset>(
+            padding: EdgeInsetsGeometry.all(AppSpacing.xs / 1.5),
             position: PopupMenuPosition.under,
             onSelected: (_PeriodPreset preset) {
               switch (preset) {
@@ -85,20 +87,21 @@ class SummaryPeriodSwitcher extends ConsumerWidget {
                   _pickCustomRange(context, ref, period);
               }
             },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<_PeriodPreset>>[
-              PopupMenuItem<_PeriodPreset>(
-                value: _PeriodPreset.last30Days,
-                child: Text(l10n.summaryPeriodLast30Days),
-              ),
-              PopupMenuItem<_PeriodPreset>(
-                value: _PeriodPreset.allTime,
-                child: Text(l10n.summaryPeriodAllTime),
-              ),
-              PopupMenuItem<_PeriodPreset>(
-                value: _PeriodPreset.custom,
-                child: Text(l10n.summaryPeriodCustom),
-              ),
-            ],
+            itemBuilder: (BuildContext context) =>
+                <PopupMenuEntry<_PeriodPreset>>[
+                  PopupMenuItem<_PeriodPreset>(
+                    value: _PeriodPreset.last30Days,
+                    child: Text(l10n.summaryPeriodLast30Days),
+                  ),
+                  PopupMenuItem<_PeriodPreset>(
+                    value: _PeriodPreset.allTime,
+                    child: Text(l10n.summaryPeriodAllTime),
+                  ),
+                  PopupMenuItem<_PeriodPreset>(
+                    value: _PeriodPreset.custom,
+                    child: Text(l10n.summaryPeriodCustom),
+                  ),
+                ],
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[

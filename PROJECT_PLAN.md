@@ -538,8 +538,9 @@ Stream<List<TransactionListRow>> transactionList(TransactionListRef ref) {
 ```
 
 **Enforced invariant:** `SummaryWalletSelection` and `TransactionListFilter.wallets` are separate providers. A change to the summary account selection must not read from or write to the list filter, and vice-versa. Add a widget test asserting this decoupling.
+*Note:* Previously, the Date Period was also strictly isolated. This rule has been modified: the Date Period is now a globally shared state driven by `summaryPeriodProvider` which controls both the Summary card and the Transaction List simultaneously.
 
-**List period scope (§C.3, Phase 12).** The List has its OWN always-on period control — `TransactionListPeriod`, an independent mirror of `SummaryPeriod` (month + prev/next, Last-30-days, All-time, Custom) reusing the generic `SummaryPeriodValue`. It defaults to the current month, so the list is period-scoped from the first frame; the manual date-range filter-sheet control was removed in favor of it. Each change pushes its resolved range into `TransactionListFilter.setDateRange` (resetting the paging window and keeping `filter.range` in sync), but the SQL date bound is derived directly from `TransactionListPeriod` in `transactionList`. `TransactionListPeriod` never reads the Summary scope (the two-scope rule still holds). `TransactionFilter.range` is intentionally excluded from `isActive`, so the always-on period never lights the filter badge.
+**List period scope (§C.3, Phase 12).** The List uses the globally shared `summaryPeriodProvider`. It defaults to the current month. Each change pushes its resolved range into `TransactionListFilter.setDateRange` (resetting the paging window and keeping `filter.range` in sync), but the SQL date bound is derived directly from `summaryPeriodProvider` in `transactionList`. `TransactionFilter.range` is intentionally excluded from `isActive`, so the always-on period never lights the filter badge.
 
 **Overdue carry-forward (§C.4).** When the selected List period contains today, `transactionList` passes `carryForwardOverdue: true` to `watchTransactionRows`, which additionally surfaces pending (borç/alacak) rows dated *before* the period — so unpaid items never fall out of view. Past/future periods (not containing today) show only their own rows. The carry-forward is a single fully-parenthesized `OR` clause AND'd with every other facet, so an explicit `status` filter still excludes carried pending rows.
 
@@ -673,7 +674,7 @@ Each phase below lists **Goal → Tasks → Key files → Definition of Done (Do
 - [ ] Transfers are two atomic legs; excluded from income/expense summary; included in balances.
 - [ ] Recurring generation is idempotent (`UNIQUE(recurringRuleId, valueDate)`).
 - [ ] Month-end recurrence clamps and does not drift.
-- [ ] Summary scope and List scope are separate Riverpod states (asserted by test).
+- [ ] Wallet account scopes (SummaryWalletSelection vs TransactionListFilter.wallets) are decoupled, but the Date Period is globally shared (driven by `summaryPeriodProvider`).
 - [ ] `valueDate` is date-only; grouping/reports never suffer timezone drift.
 - [ ] Deleting a wallet/account with transactions is blocked or archived, never orphaning ledger rows.
 - [ ] All user-facing strings come from ARB (Turkish); code stays English.
