@@ -93,7 +93,7 @@ Stream<SummaryData> summary(Ref ref) async* {
   final DateRange range = ref.watch(summaryPeriodProvider).range;
   final String base = ref.watch(baseCurrencyProvider);
   final List<Wallet> wallets =
-      ref.watch(allWalletsProvider).asData?.value ?? const <Wallet>[];
+      ref.watch(allWalletsProvider).value ?? const <Wallet>[];
   final TransactionRepository repo = ref.watch(transactionRepositoryProvider);
   final DateTime today = AppDate.today();
 

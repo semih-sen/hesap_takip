@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hesap_takip/data/database/app_database.dart';
 import 'package:hesap_takip/data/database/app_database_provider.dart';
+
+import 'package:hesap_takip/core/currency/currency.dart';
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:hesap_takip/data/database/tables/enums.dart';
 import 'package:hesap_takip/features/transactions/services/balance_service.dart';
 
@@ -110,7 +113,17 @@ void main() {
     final int usdW = await wallet(a, code: 'USD', initial: 0);
     await addCompleted(usdW, amountMinor: 1000, code: 'USD'); // 10.00 USD
 
-    final BalanceService svc = BalanceService(db);
+    final CurrencyService currency = CurrencyService(
+      const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+
+],
+    );
+    final BalanceService svc = BalanceService(db, currency);
     final int total = await svc
         .watchAccountTotalBaseMinor(a, 'TRY')
         .first;

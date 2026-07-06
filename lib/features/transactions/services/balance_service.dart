@@ -15,11 +15,10 @@ part 'balance_service.g.dart';
 /// never by summing a transaction stream in Dart. Values are minor units in the
 /// wallet's own currency; formatting is the UI's job via `CurrencyService`.
 class BalanceService {
-  const BalanceService(this._db);
+  const BalanceService(this._db, this._currency);
 
   final AppDatabase _db;
-
-  static const CurrencyService _currency = CurrencyService();
+  final CurrencyService _currency;
 
   /// Reactive balance for one wallet (its own minor units).
   Stream<int> watchWalletBalanceMinor(int walletId) =>
@@ -64,7 +63,7 @@ class BalanceService {
 /// App-lifetime singleton [BalanceService].
 @Riverpod(keepAlive: true)
 BalanceService balanceService(Ref ref) =>
-    BalanceService(ref.watch(appDatabaseProvider));
+    BalanceService(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));
 
 /// Reactive balance (minor units) for a single wallet.
 @riverpod

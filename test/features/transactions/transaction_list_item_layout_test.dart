@@ -1,3 +1,6 @@
+import 'package:hesap_takip/core/currency/currency.dart';
+import 'package:hesap_takip/data/database/seed.dart';
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +49,7 @@ void main() {
   }
 
   Widget wrap(List<TransactionListRow> rows, {double width = 380}) {
+    final currency = CurrencyService(kDefaultCurrencies.map((c) => Currency(code: c.code, symbol: c.symbol, minorDigits: c.minorDigits, symbolOnLeft: c.symbolOnLeft)).toList());
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
@@ -65,7 +69,7 @@ void main() {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 for (final TransactionListRow r in rows)
-                  TransactionListItem(key: ValueKey<int>(r.id), row: r),
+                  TransactionListItem(key: ValueKey<int>(r.id), row: r, currency: currency),
               ],
             ),
           ),
@@ -203,3 +207,4 @@ void main() {
     },
   );
 }
+

@@ -47,8 +47,6 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
 
   bool get _isEdit => widget.transferGroupId != null;
 
-  static const CurrencyService _currency = CurrencyService();
-
   @override
   void initState() {
     super.initState();
@@ -86,10 +84,11 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
       _fromWalletId = legs.from.walletId;
       _toWalletId = legs.to.walletId;
       _valueDate = AppDate.dateOnly(legs.from.valueDate);
-      _fromAmountController.text = _currency
+      final CurrencyService currency = ref.read(currencyServiceProvider);
+      _fromAmountController.text = currency
           .fromMinor(legs.from.amount.minorUnits, legs.from.currencyCode)
           .toString();
-      _toAmountController.text = _currency
+      _toAmountController.text = currency
           .fromMinor(legs.to.amount.minorUnits, legs.to.currencyCode)
           .toString();
       _noteController.text = legs.from.note ?? '';
@@ -193,12 +192,13 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
     setState(() => _saving = true);
 
     final bool cross = from.currencyCode != to.currencyCode;
-    final int fromMinor = _currency.toMinor(
+    final CurrencyService currency = ref.read(currencyServiceProvider);
+    final int fromMinor = currency.toMinor(
       parseTurkishAmount(_fromAmountController.text) ?? Decimal.zero,
       from.currencyCode,
     );
     final int toMinor = cross
-        ? _currency.toMinor(
+        ? currency.toMinor(
             parseTurkishAmount(_toAmountController.text) ?? Decimal.zero,
             to.currencyCode,
           )
@@ -433,10 +433,11 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
   Widget _walletLabel(Wallet w, Map<int, String> accountNames) {
     final String account = accountNames[w.accountId] ?? '';
     final String head = '$account / ${w.name} (${w.currencyCode})';
+    final CurrencyService currency = ref.watch(currencyServiceProvider);
     final AsyncValue<int> balance = ref.watch(walletBalanceProvider(w.id));
     final String label = balance.maybeWhen(
       data: (int minor) =>
-          '$head · ${_currency.format(minor, w.currencyCode)}',
+          '$head · ${currency.format(minor, w.currencyCode)}',
       orElse: () => head,
     );
     return Text(label, maxLines: 1, overflow: TextOverflow.ellipsis);

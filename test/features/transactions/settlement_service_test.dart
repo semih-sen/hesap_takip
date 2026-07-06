@@ -1,6 +1,8 @@
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:hesap_takip/core/date/date_range.dart';
 import 'package:hesap_takip/data/database/app_database.dart';
@@ -22,8 +24,18 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    service = SettlementService(db, const CurrencyService());
-    repo = DriftTransactionRepository(db);
+    final CurrencyService currency = CurrencyService(
+      const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+
+],
+    );
+    service = SettlementService(db, currency);
+    repo = DriftTransactionRepository(db, currency);
   });
 
   tearDown(() async {
@@ -276,3 +288,4 @@ void main() {
     expect(await balance(wallet), -1000);
   });
 }
+

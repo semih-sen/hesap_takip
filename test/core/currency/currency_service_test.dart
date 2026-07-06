@@ -4,19 +4,28 @@ import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
 
 void main() {
-  const CurrencyService service = CurrencyService();
+  final CurrencyService service = CurrencyService(
+    const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
 
-  group('registry', () {
+],
+  );
+
+  group('registry lookup', () {
     test('known codes resolve; JPY has 0 minor digits', () {
-      expect(CurrencyRegistry.byCode('TRY').minorDigits, 2);
-      expect(CurrencyRegistry.byCode('JPY').minorDigits, 0);
+      expect(service.byCode('TRY').minorDigits, 2);
+      expect(service.byCode('JPY').minorDigits, 0);
       // Case-insensitive.
-      expect(CurrencyRegistry.byCode('usd').code, 'USD');
+      expect(service.byCode('usd').code, 'USD');
     });
 
     test('unknown code throws a typed error', () {
       expect(
-        () => CurrencyRegistry.byCode('XYZ'),
+        () => service.byCode('XYZ'),
         throwsA(isA<UnknownCurrencyException>()),
       );
     });

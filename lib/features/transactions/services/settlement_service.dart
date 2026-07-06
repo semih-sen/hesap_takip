@@ -217,4 +217,4 @@ class SettlementService {
 /// App-lifetime singleton [SettlementService].
 @Riverpod(keepAlive: true)
 SettlementService settlementService(Ref ref) =>
-    SettlementService(ref.watch(appDatabaseProvider), const CurrencyService());
+    SettlementService(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));

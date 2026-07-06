@@ -261,10 +261,8 @@ class _FlowCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final CrossAxisAlignment cross = alignEnd
-        ? CrossAxisAlignment.end
-        : CrossAxisAlignment.start;
-    final TextAlign textAlign = alignEnd ? TextAlign.end : TextAlign.start;
+    final CrossAxisAlignment cross = CrossAxisAlignment.center;
+    final TextAlign textAlign = TextAlign.center;
     return Column(
       crossAxisAlignment: cross,
       mainAxisSize: MainAxisSize.min,
@@ -314,35 +312,36 @@ class _BreakdownLine extends StatelessWidget {
     final TextStyle? labelStyle = theme.textTheme.labelSmall?.copyWith(
       color: semantic.textMuted,
     );
-    final Widget separator = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      child: Text('·', style: labelStyle),
-    );
 
-    final List<Widget> children = <Widget>[];
-    for (int i = 0; i < entries.length; i++) {
-      if (i > 0) {
-        children.add(separator);
-      }
-      final _BreakdownEntry e = entries[i];
-      children
-        ..add(Text(e.label, style: labelStyle))
-        ..add(const SizedBox(width: AppSpacing.xs))
-        ..add(
-          Text(
-            e.value,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: e.color,
-              fontWeight: FontWeight.w600,
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: entries.map((_BreakdownEntry e) {
+        return Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                e.label,
+                style: labelStyle,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xs / 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: Text(
+                  e.value,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: e.color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
-    }
-
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.center,
-      child: Row(mainAxisSize: MainAxisSize.min, children: children),
+      }).toList(),
     );
   }
 }

@@ -2,6 +2,8 @@ import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:hesap_takip/core/currency/money.dart';
 import 'package:hesap_takip/core/currency/split_allocation.dart';
@@ -14,11 +16,21 @@ import 'package:hesap_takip/features/transactions/services/balance_service.dart'
 void main() {
   late AppDatabase db;
   late DriftTransactionRepository repo;
-  const CurrencyService currency = CurrencyService();
+  late CurrencyService currency;
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    repo = DriftTransactionRepository(db);
+    currency = CurrencyService(
+      const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+
+],
+    );
+    repo = DriftTransactionRepository(db, currency);
   });
 
   tearDown(() async {
@@ -255,7 +267,7 @@ void main() {
     test(
       'a completed expense lowers the balance; deleting restores it',
       () async {
-        final BalanceService balances = BalanceService(db);
+        final BalanceService balances = BalanceService(db, currency);
         final int accountId = await seedAccount();
         final int walletId = await seedWallet(accountId, initialMinor: 50000);
         final int catA = await seedCategory(name: 'A');

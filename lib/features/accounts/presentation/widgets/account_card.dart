@@ -215,13 +215,16 @@ class _AccountTotal extends ConsumerWidget {
     );
     final ThemeData theme = Theme.of(context);
     return total.when(
-      data: (int minor) => Text(
-        l10n.accountTotalLabel(const CurrencyService().format(minor, base)),
-        style: theme.textTheme.labelMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: theme.colorScheme.onSurface,
-        ),
-      ),
+      data: (int minor) {
+        final CurrencyService currency = ref.watch(currencyServiceProvider);
+        return Text(
+          l10n.accountTotalLabel(currency.format(minor, base)),
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface,
+          ),
+        );
+      },
       loading: () => const SizedBox(
         width: 14,
         height: 14,

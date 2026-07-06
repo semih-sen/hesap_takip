@@ -314,4 +314,4 @@ class _TransferWallets {
 /// App-lifetime singleton [TransferService].
 @Riverpod(keepAlive: true)
 TransferService transferService(Ref ref) =>
-    TransferService(ref.watch(appDatabaseProvider), const CurrencyService());
+    TransferService(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));

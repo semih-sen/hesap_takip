@@ -167,6 +167,16 @@ enum RecurrenceFrequency { daily, weekly, monthly, yearly }
 ### 5.2 Tables
 
 ```dart
+// ---------- Currencies ----------
+class Currencies extends Table {
+  TextColumn get code => text().withLength(min: 3, max: 3)();
+  TextColumn get symbol => text()();
+  IntColumn get minorDigits => integer()();
+  BoolColumn get symbolOnLeft => boolean()();
+  @override
+  Set<Column> get primaryKey => {code};
+}
+
 // ---------- Accounts ----------
 class Accounts extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -317,7 +327,7 @@ class AppSettings extends Table {
 
 ## 6. Money & Currency Handling (core, implement in Phase 2)
 
-**`Currency` metadata** (static registry): `code`, `symbol`, `minorDigits`, `symbolOnLeft`. Seed at least TRY, USD, EUR, GBP; make it extensible.
+**`Currency` metadata** (database-backed): `code`, `symbol`, `minorDigits`, `symbolOnLeft`. Seeded with TRY, USD, EUR, GBP. Replaces the old static registry. User-managed via `CurrencyService` streaming from Drift.
 
 **`CurrencyService` responsibilities:**
 - `int toMinor(Decimal amount, String code)` — scales by `10^minorDigits`, rounds **half-up**, returns integer.
@@ -650,9 +660,9 @@ Each phase below lists **Goal → Tasks → Key files → Definition of Done (Do
 - **Tasks:** recurring rules CRUD + frequency builder; `RecurringService` (§8.4) with month-end clamping, interval, end conditions, idempotency, autoPost vs pending; startup generation provider + manual "generate now"; series-edit dialogs (this only / this and future).
 - **DoD:** a monthly-on-the-31st rule generates on Feb 28/29 and back on the 31st thereafter; re-running generation never duplicates; end conditions respected; integration test covers clamping + idempotency.
 
-### Phase 11 — Settings, base currency, rates, backup ✅ COMPLETE
+### Phase 11 — Settings, base currency, rates, backup, dynamic currencies ✅ COMPLETE
 - **Goal:** Configuration + data safety.
-- **Tasks:** base-currency change with the historical-immutability warning (§6); manual exchange-rate entry feeding the snapshot prefill; first day of week; JSON export/import backup of the whole DB.
+- **Tasks:** dynamic currencies management (add/edit DB-backed currencies); base-currency change with the historical-immutability warning (§6); manual exchange-rate entry feeding the snapshot prefill; first day of week; JSON export/import backup of the whole DB.
 - **DoD:** base currency change affects only new transactions; backup export → wipe → import round-trips all data.
 - **Implemented (§E):** real `SettingsScreen` (base currency + first-day-of-week + exchange rates + backup sections). Base-currency change is gated by a confirmation dialog explaining historical immutability; only the settings row changes (verified by test — existing snapshots untouched). `ExchangeRatesScreen` = list/add/delete cached rates (simple confirm delete, no undo). `BackupService` JSON export/import via each row's generated `toJson`/`fromJson` with a `Decimal`-aware `ValueSerializer`; import is a destructive wipe-and-replace inside one transaction with `PRAGMA foreign_keys = OFF` for the duration, preserving original primary keys, then a `foreign_key_check`. Envelope carries both `backupFormatVersion` and the DB `schemaVersion`; an unknown/newer version is rejected. Backup file IO uses `file_picker` (`saveFile`/`pickFiles`); a successful import asks the user to restart (deliberate v1 simplicity over live provider reload). No schema migration; `schemaVersion` unchanged at 2.
 

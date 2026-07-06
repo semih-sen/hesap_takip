@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:hesap_takip/data/database/app_database.dart';
 import 'package:hesap_takip/data/database/tables/enums.dart';
@@ -16,7 +17,14 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    service = RecurringService(db, const CurrencyService());
+    service = RecurringService(db, const CurrencyService(const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+
+]));
   });
 
   tearDown(() async {

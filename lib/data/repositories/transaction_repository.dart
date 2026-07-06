@@ -104,9 +104,10 @@ abstract interface class TransactionRepository {
 }
 
 class DriftTransactionRepository implements TransactionRepository {
-  DriftTransactionRepository(this._db);
+  DriftTransactionRepository(this._db, this._currency);
 
   final db.AppDatabase _db;
+  final CurrencyService _currency;
 
   @override
   Stream<List<Transaction>> watchTransactions({int? walletId}) {
@@ -127,7 +128,7 @@ class DriftTransactionRepository implements TransactionRepository {
     carryForwardOverdue: carryForwardOverdue,
   );
 
-  static const CurrencyService _currency = CurrencyService();
+
 
   @override
   Stream<SummaryData> watchSummary({
@@ -361,4 +362,4 @@ TransactionStatus statusForValueDate(DateTime valueDate) =>
 /// App-lifetime singleton transaction repository.
 @Riverpod(keepAlive: true)
 TransactionRepository transactionRepository(Ref ref) =>
-    DriftTransactionRepository(ref.watch(appDatabaseProvider));
+    DriftTransactionRepository(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));

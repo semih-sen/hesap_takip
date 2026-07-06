@@ -1,3 +1,4 @@
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -126,7 +127,7 @@ void main() {
     test('create then reactive read returns a domain Transaction', () async {
       final AccountRepository accounts = DriftAccountRepository(db);
       final WalletRepository wallets = DriftWalletRepository(db);
-      final TransactionRepository txns = DriftTransactionRepository(db);
+      final TransactionRepository txns = DriftTransactionRepository(db, const CurrencyService([]));
 
       final int accountId = await accounts.createAccount(newAccount());
       final int walletId = await wallets.createWallet(newWallet(accountId));
@@ -190,3 +191,5 @@ ExchangeRateEntry _rate(String rate, DateTime asOf) => ExchangeRateEntry(
   rate: Decimal.parse(rate),
   asOfDate: asOf,
 );
+
+

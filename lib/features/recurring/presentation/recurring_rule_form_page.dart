@@ -104,7 +104,7 @@ class _RecurringRuleFormPageState extends ConsumerState<RecurringRuleFormPage> {
           : AppDate.dateOnly(source.endDate!);
       _autoPost = source.autoPost;
       _nameController.text = source.name;
-      _amountController.text = const CurrencyService()
+      _amountController.text = ref.read(currencyServiceProvider)
           .fromMinor(source.amount.minorUnits, source.currencyCode)
           .toString();
       if (source.maxOccurrences != null) {
@@ -220,7 +220,7 @@ class _RecurringRuleFormPageState extends ConsumerState<RecurringRuleFormPage> {
     }
     setState(() => _saving = true);
 
-    final CurrencyService currency = const CurrencyService();
+    final CurrencyService currency = ref.read(currencyServiceProvider);
     final String currencyCode = wallet.currencyCode;
     final Decimal amount =
         parseTurkishAmount(_amountController.text) ?? Decimal.zero;

@@ -21,9 +21,10 @@ import '../../application/transactions_providers.dart';
 /// recurring variants render only from real fields (populated in Phases 8–10);
 /// they are never faked, so today the common case is the category chips.
 class TransactionListItem extends StatelessWidget {
-  const TransactionListItem({super.key, required this.row});
+  const TransactionListItem({super.key, required this.row, required this.currency});
 
   final TransactionListRow row;
+  final CurrencyService currency;
 
   /// Max category chips shown inline before collapsing the rest into a "+N".
   static const int _maxChips = 3;
@@ -33,9 +34,7 @@ class TransactionListItem extends StatelessWidget {
   /// height. Sized to fit the tallest single-line Row-3 variant.
   static const double _row3SlotHeight = 22;
 
-  /// Stateless formatting engine (no rate math on this path); constructing it
-  /// directly keeps the widget provider-free and const-friendly.
-  static const CurrencyService _currency = CurrencyService();
+
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +56,7 @@ class TransactionListItem extends StatelessWidget {
     final String title = row.title ?? transactionTypeLabel(l10n, row.type);
     final String sign = row.flowDirection == FlowDirection.inflow ? '+' : '−';
     final String amountText =
-        '$sign${_currency.format(row.amountMinor, row.currencyCode)}';
+        '$sign${currency.format(row.amountMinor, row.currencyCode)}';
     final String dateText = DateFormat(
       'd MMM yyyy',
       'tr_TR',

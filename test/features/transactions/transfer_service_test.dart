@@ -3,7 +3,9 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
+import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/date/date_range.dart';
+import 'package:hesap_takip/data/database/seed.dart';
 import 'package:hesap_takip/core/undo/entity_actions.dart';
 import 'package:hesap_takip/core/undo/pending_action_queue.dart';
 import 'package:hesap_takip/core/undo/undo_service.dart';
@@ -22,7 +24,7 @@ void main() {
   late TransferService service;
   late DriftTransactionRepository repo;
 
-  const CurrencyService currency = CurrencyService();
+  late CurrencyService currency;
   final DateTime date = DateTime(2026, 7, 10);
   final DateRange july = DateRange(
     start: DateTime(2026, 7, 1),
@@ -32,8 +34,18 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
+    currency = CurrencyService(
+      const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+
+],
+    );
     service = TransferService(db, currency);
-    repo = DriftTransactionRepository(db);
+    repo = DriftTransactionRepository(db, currency);
   });
 
   tearDown(() async {

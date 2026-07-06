@@ -123,7 +123,8 @@ class _WalletFormPageState extends ConsumerState<WalletFormPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final List<Currency> currencies = CurrencyRegistry.all;
+    final CurrencyService currencyService = ref.watch(currencyServiceProvider);
+    final List<Currency> currencies = currencyService.all;
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? l10n.walletEdit : l10n.walletAdd)),
       body: SafeArea(

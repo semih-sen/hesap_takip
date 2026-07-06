@@ -157,7 +157,8 @@ class _RuleRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
-    final String amountText = const CurrencyService().format(
+    final CurrencyService currencyService = ref.watch(currencyServiceProvider);
+    final String amountText = currencyService.format(
       rule.amount.minorUnits,
       rule.currencyCode,
     );

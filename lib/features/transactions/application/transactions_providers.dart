@@ -227,8 +227,7 @@ Stream<List<TransactionListRow>> transactionList(Ref ref) {
 @riverpod
 List<TransactionListRow> visibleTransactions(Ref ref) {
   final List<TransactionListRow> base =
-      ref.watch(transactionListProvider).asData?.value ??
-      const <TransactionListRow>[];
+      ref.watch(transactionListProvider).value ?? const <TransactionListRow>[];
   final List<PendingEntry> queue = ref.watch(pendingActionQueueProvider);
   return applyOverlay<TransactionListRow>(
     base: base,

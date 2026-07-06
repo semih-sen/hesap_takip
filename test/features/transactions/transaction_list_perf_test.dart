@@ -1,4 +1,6 @@
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:decimal/decimal.dart';
+import 'package:hesap_takip/core/date/app_date.dart';
 import 'package:drift/drift.dart' show Batch, Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -8,13 +10,16 @@ import 'package:hesap_takip/app/theme/app_theme.dart';
 import 'package:hesap_takip/data/database/app_database.dart' as db;
 import 'package:hesap_takip/data/database/app_database_provider.dart';
 import 'package:hesap_takip/data/database/tables/enums.dart';
+import 'package:hesap_takip/features/transactions/application/summary_providers.dart';
 import 'package:hesap_takip/features/transactions/application/transactions_providers.dart';
 import 'package:hesap_takip/features/transactions/presentation/widgets/transaction_list_view.dart';
+import 'package:hesap_takip/features/transactions/services/summary_period_value.dart';
 import 'package:hesap_takip/l10n/generated/app_localizations.dart';
 
 /// PROJECT_PLAN §B.5: prove the list stays bounded and builds smoothly on a
 /// large (5,000-row) ledger — the query is windowed (never streamed unbounded)
 /// and the sliver list lazily builds only visible rows.
+
 void main() {
   const int kRows = 5000;
 
@@ -62,7 +67,7 @@ void main() {
   }
 
   setUp(() {
-    database = db.AppDatabase.forTesting(NativeDatabase.memory());
+    database = db.AppDatabase.forTesting(NativeDatabase.memory(logStatements: true));
   });
 
   tearDown(() async {
@@ -84,11 +89,14 @@ void main() {
         overrides: [appDatabaseProvider.overrideWithValue(database)],
       );
       addTearDown(container.dispose);
+      container.read(summaryPeriodProvider.notifier).setAllTime();
 
       container.listen(visibleTransactionsProvider, (_, _) {});
-      await container.read(transactionListProvider.future);
-
-      // First page is bounded to pageSize — NOT all 5k rows.
+      final listFuture = container.read(transactionListProvider.future);
+      listFuture.catchError((e) { print('Future error: $e'); return <TransactionListRow>[]; });
+      await listFuture;
+      await Future<void>.delayed(Duration.zero);
+      
       expect(
         container.read(visibleTransactionsProvider).length,
         kTransactionPageSize,
@@ -97,6 +105,7 @@ void main() {
       // Growing the window pulls exactly one more page.
       container.read(transactionListWindowProvider.notifier).loadMore();
       await container.read(transactionListProvider.future);
+      await Future<void>.delayed(Duration.zero);
       expect(
         container.read(visibleTransactionsProvider).length,
         kTransactionPageSize * 2,
@@ -116,6 +125,7 @@ void main() {
       overrides: [appDatabaseProvider.overrideWithValue(database)],
     );
     addTearDown(container.dispose);
+    container.read(summaryPeriodProvider.notifier).setAllTime();
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -129,10 +139,20 @@ void main() {
         ),
       ),
     );
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 250)),
-    );
+    await tester.runAsync(() async {
+      await container.read(transactionListProvider.future);
+    });
     await tester.pump();
+
+    // Debug what is actually rendered
+    if (find.byType(CircularProgressIndicator).evaluate().isNotEmpty) {
+      print('Widget is still CircularProgressIndicator!');
+    }
+    if (find.text('Bir hata oluştu.').evaluate().isNotEmpty) {
+      print('Widget has an error!');
+      final errorStream = container.read(transactionListProvider);
+      print('Error is: ${errorStream.error}');
+    }
 
     // The list rendered (not stuck on the loading spinner).
     expect(find.byType(CustomScrollView), findsOneWidget);
@@ -153,3 +173,4 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+

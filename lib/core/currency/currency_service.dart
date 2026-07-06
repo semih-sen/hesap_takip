@@ -4,6 +4,8 @@ import 'package:decimal/decimal.dart';
 import 'package:intl/intl.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../data/database/seed.dart';
+import '../../data/repositories/currency_repository.dart';
 import 'currency.dart';
 
 part 'currency_service.g.dart';
@@ -16,31 +18,49 @@ part 'currency_service.g.dart';
 /// integer minor-unit result; no `double` participates in a money path (the
 /// `toDouble()` in [format] is a display-only boundary).
 class CurrencyService {
-  const CurrencyService();
+  const CurrencyService(this._currencies);
+
+  final List<Currency> _currencies;
 
   static final Decimal _half = Decimal.parse('0.5');
 
+  /// Looks up a currency by code (case-insensitive).
+  /// Throws [UnknownCurrencyException] for an unregistered code.
+  Currency byCode(String code) {
+    final String upper = code.toUpperCase();
+    for (final Currency c in _currencies) {
+      if (c.code.toUpperCase() == upper) {
+        return c;
+      }
+    }
+    throw UnknownCurrencyException(code);
+  }
+
+  /// Whether [code] is registered (case-insensitive).
+  bool isSupported(String code) {
+    final String upper = code.toUpperCase();
+    return _currencies.any((Currency c) => c.code.toUpperCase() == upper);
+  }
+
+  /// All known currencies.
+  List<Currency> get all => List<Currency>.unmodifiable(_currencies);
+
   /// Scales [amount] (major units) to integer minor units for [code],
   /// multiplying by `10^minorDigits` and rounding half-up.
-  ///
-  /// Example: `toMinor(2.005, 'USD') == 201` — the `.5` boundary rounds up.
   int toMinor(Decimal amount, String code) {
-    final Currency currency = CurrencyRegistry.byCode(code);
+    final Currency currency = byCode(code);
     return _roundHalfUp(amount.shift(currency.minorDigits));
   }
 
   /// Inverse of [toMinor]: exact major-unit [Decimal] for [minor] units of
   /// [code]. Shifting by a power of ten is exact, so no rounding is involved.
   Decimal fromMinor(int minor, String code) {
-    final Currency currency = CurrencyRegistry.byCode(code);
+    final Currency currency = byCode(code);
     return Decimal.fromInt(minor).shift(-currency.minorDigits);
   }
 
   /// Converts [amountMinor] in [fromCode] to integer minor units in [toCode] at
   /// [rate] (major-to-major), rounding half-up exactly once.
-  ///
-  /// The path is multiplication only (`major * rate`), so it never leaves
-  /// [Decimal] for a [Rational]; the single rounding happens in [toMinor].
   int convertMinor({
     required int amountMinor,
     required String fromCode,
@@ -52,27 +72,17 @@ class CurrencyService {
     return toMinor(converted, toCode);
   }
 
-  /// Formats [minor] units of [code] with `tr_TR` grouping by default
-  /// (e.g. TRY `1.234,56 ₺`; JPY prints no decimals).
-  ///
-  /// The symbol and fraction-digit count come from [CurrencyRegistry]; grouping
-  /// and symbol placement come from the locale pattern (defaults to `tr_TR`).
+  /// Formats [minor] units of [code] with `tr_TR` grouping by default.
   String format(int minor, String code, {Locale? locale}) {
-    final Currency currency = CurrencyRegistry.byCode(code);
+    final Currency currency = byCode(code);
     final NumberFormat formatter = NumberFormat.currency(
       locale: locale?.toString() ?? 'tr_TR',
       symbol: currency.symbol,
       decimalDigits: currency.minorDigits,
     );
-    // Display boundary only: intl needs a `num`. The value handed over is the
-    // exact minor-unit amount, so no precision is lost for realistic amounts.
     return formatter.format(fromMinor(minor, code).toDouble());
   }
 
-  /// Rounds a [Decimal] to the nearest integer, ties away from zero (half-up).
-  ///
-  /// Implemented explicitly (not via [Decimal.round]) so the rounding mode is
-  /// guaranteed regardless of the package default.
   int _roundHalfUp(Decimal value) {
     if (value == Decimal.zero) {
       return 0;
@@ -83,6 +93,25 @@ class CurrencyService {
   }
 }
 
-/// App-lifetime singleton [CurrencyService] (stateless; keep-alive).
 @Riverpod(keepAlive: true)
-CurrencyService currencyService(Ref ref) => const CurrencyService();
+Stream<List<Currency>> currencies(Ref ref) {
+  return ref.watch(currencyRepositoryProvider).watchAllCurrencies();
+}
+
+/// App-lifetime singleton [CurrencyService]. It is injected synchronously using
+/// the latest available currencies from the DB, falling back to defaults if
+/// still loading, preventing UI flashes.
+@Riverpod(keepAlive: true)
+CurrencyService currencyService(Ref ref) {
+  final AsyncValue<List<Currency>> asyncCurrencies = ref.watch(currenciesProvider);
+  
+  final List<Currency> currencies = asyncCurrencies.asData?.value ??
+      kDefaultCurrencies.map((SeedCurrency c) => Currency(
+            code: c.code,
+            symbol: c.symbol,
+            minorDigits: c.minorDigits,
+            symbolOnLeft: c.symbolOnLeft,
+          )).toList();
+          
+  return CurrencyService(currencies);
+}

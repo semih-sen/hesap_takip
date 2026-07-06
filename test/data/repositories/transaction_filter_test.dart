@@ -1,3 +1,4 @@
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -20,7 +21,7 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    repo = DriftTransactionRepository(db);
+    repo = DriftTransactionRepository(db, const CurrencyService([]));
   });
 
   tearDown(() async {
@@ -450,3 +451,5 @@ void main() {
     });
   });
 }
+
+

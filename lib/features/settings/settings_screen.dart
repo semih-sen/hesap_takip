@@ -9,7 +9,9 @@ import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:hesap_takip/app/theme/app_spacing.dart';
 import 'package:hesap_takip/core/currency/currency.dart';
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:hesap_takip/data/repositories/settings_repository.dart';
+import 'package:hesap_takip/features/settings/presentation/currencies_screen.dart';
 import 'package:hesap_takip/features/settings/presentation/exchange_rates_screen.dart';
 import 'package:hesap_takip/features/settings/services/backup_service.dart';
 import 'package:hesap_takip/l10n/generated/app_localizations.dart';
@@ -23,8 +25,10 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _changeBaseCurrency(BuildContext context, WidgetRef ref) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String current = ref.read(baseCurrencyProvider);
+    final CurrencyService currencyService = ref.read(currencyServiceProvider);
+    
     final List<String> codes = <String>[
-      for (final Currency c in CurrencyRegistry.all) c.code,
+      for (final Currency c in currencyService.all) c.code,
     ]..sort();
 
     final String? picked = await showModalBottomSheet<String>(
@@ -36,7 +40,7 @@ class SettingsScreen extends ConsumerWidget {
           children: <Widget>[
             for (final String code in codes)
               ListTile(
-                title: Text('$code · ${CurrencyRegistry.byCode(code).symbol}'),
+                title: Text('$code · ${currencyService.byCode(code).symbol}'),
                 trailing: code == current ? const Icon(Icons.check) : null,
                 onTap: () => Navigator.of(context).pop(code),
               ),
@@ -108,6 +112,12 @@ class SettingsScreen extends ConsumerWidget {
   void _openExchangeRates(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => const ExchangeRatesScreen()),
+    );
+  }
+
+  void _openCurrencies(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const CurrenciesScreen()),
     );
   }
 
@@ -286,6 +296,13 @@ class SettingsScreen extends ConsumerWidget {
               subtitle: Text(l10n.settingsExchangeRatesSubtitle),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _openExchangeRates(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt),
+              title: const Text('Para Birimleri'),
+              subtitle: const Text('Para birimi ekle veya düzelt'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openCurrencies(context),
             ),
             const Divider(),
             _SectionHeader(l10n.settingsBackupLabel),

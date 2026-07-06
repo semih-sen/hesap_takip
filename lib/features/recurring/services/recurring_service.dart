@@ -207,4 +207,4 @@ class _RateSnapshot {
 /// App-lifetime singleton [RecurringService].
 @Riverpod(keepAlive: true)
 RecurringService recurringService(Ref ref) =>
-    RecurringService(ref.watch(appDatabaseProvider), const CurrencyService());
+    RecurringService(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));

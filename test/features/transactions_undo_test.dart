@@ -1,3 +1,4 @@
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:decimal/decimal.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -130,3 +131,4 @@ void main() {
     expect(await database.transactionDao.getTransactionById(txnId), isNotNull);
   });
 }
+

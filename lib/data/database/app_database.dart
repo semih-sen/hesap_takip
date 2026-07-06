@@ -6,6 +6,7 @@ import 'converters/date_only_converter.dart';
 import 'converters/decimal_converter.dart';
 import 'daos/account_dao.dart';
 import 'daos/category_dao.dart';
+import 'daos/currency_dao.dart';
 import 'daos/exchange_rate_dao.dart';
 import 'daos/recurring_dao.dart';
 import 'daos/settings_dao.dart';
@@ -15,6 +16,7 @@ import 'seed.dart';
 import 'tables/accounts.dart';
 import 'tables/app_settings.dart';
 import 'tables/categories.dart';
+import 'tables/currencies.dart';
 import 'tables/enums.dart';
 import 'tables/exchange_rates.dart';
 import 'tables/recurring.dart';
@@ -40,6 +42,7 @@ part 'app_database.g.dart';
     RecurringRuleCategories,
     ExchangeRates,
     AppSettings,
+    Currencies,
   ],
   daos: [
     AccountDao,
@@ -49,6 +52,7 @@ part 'app_database.g.dart';
     RecurringDao,
     ExchangeRateDao,
     SettingsDao,
+    CurrencyDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -59,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -73,6 +77,10 @@ class AppDatabase extends _$AppDatabase {
       // existing rows keep NULL and no data is lost (Flag B-5).
       if (from < 2) {
         await m.addColumn(transactions, transactions.settledContribMinor);
+      }
+      if (from < 3) {
+        await m.createTable(currencies);
+        await _seedCurrencies();
       }
     },
     beforeOpen: (OpeningDetails details) async {
@@ -92,9 +100,10 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Idempotent first-run seed: the singleton settings row and the default
-  /// Turkish categories. Only ever invoked from `onCreate`.
+  /// Idempotent first-run seed: the singleton settings row, default currencies,
+  /// and the default Turkish categories. Only ever invoked from `onCreate`.
   Future<void> _seedDefaults() async {
+    await _seedCurrencies();
     await into(appSettings).insert(
       AppSettingsCompanion.insert(
         id: const Value(1),
@@ -115,6 +124,23 @@ class AppDatabase extends _$AppDatabase {
             iconCodePoint: c.iconCodePoint,
             sortOrder: Value(i),
           ),
+        );
+      }
+    });
+  }
+
+  Future<void> _seedCurrencies() async {
+    await batch((Batch b) {
+      for (final SeedCurrency c in kDefaultCurrencies) {
+        b.insert(
+          currencies,
+          CurrenciesCompanion.insert(
+            code: c.code,
+            symbol: c.symbol,
+            minorDigits: c.minorDigits,
+            symbolOnLeft: c.symbolOnLeft,
+          ),
+          mode: InsertMode.insertOrIgnore,
         );
       }
     });

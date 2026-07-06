@@ -21,10 +21,11 @@ Future<void> showSettleSheet(
   WidgetRef ref,
   TransactionListRow row,
 ) async {
+  final CurrencyService currency = ref.read(currencyServiceProvider);
   final _SettleInput? input = await showModalBottomSheet<_SettleInput>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _SettleSheet(row: row),
+    builder: (_) => _SettleSheet(row: row, currency: currency),
   );
   if (input == null || !context.mounted) {
     return;
@@ -78,9 +79,10 @@ class _SettleInput {
 }
 
 class _SettleSheet extends StatefulWidget {
-  const _SettleSheet({required this.row});
+  const _SettleSheet({required this.row, required this.currency});
 
   final TransactionListRow row;
+  final CurrencyService currency;
 
   @override
   State<_SettleSheet> createState() => _SettleSheetState();
@@ -91,14 +93,14 @@ class _SettleSheetState extends State<_SettleSheet> {
   late final TextEditingController _amountController;
   DateTime _date = AppDate.today();
 
-  static const CurrencyService _currency = CurrencyService();
+
 
   @override
   void initState() {
     super.initState();
     // Prefill with the full remaining, rendered in the Turkish decimal form the
     // shared parser expects (',' as the decimal separator).
-    final Decimal major = _currency.fromMinor(
+    final Decimal major = widget.currency.fromMinor(
       widget.row.amountMinor,
       widget.row.currencyCode,
     );
@@ -131,7 +133,7 @@ class _SettleSheetState extends State<_SettleSheet> {
     if (form == null || !form.validate()) {
       return;
     }
-    final int amountMinor = _currency.toMinor(
+    final int amountMinor = widget.currency.toMinor(
       parseTurkishAmount(_amountController.text) ?? Decimal.zero,
       widget.row.currencyCode,
     );
@@ -165,7 +167,7 @@ class _SettleSheetState extends State<_SettleSheet> {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   l10n.settleRemaining(
-                    _currency.format(widget.row.amountMinor, code),
+                    widget.currency.format(widget.row.amountMinor, code),
                   ),
                   style: theme.textTheme.bodySmall,
                 ),
@@ -185,10 +187,10 @@ class _SettleSheetState extends State<_SettleSheet> {
                     if (parsed == null || parsed <= Decimal.zero) {
                       return l10n.validationInvalidAmount;
                     }
-                    final int minor = _currency.toMinor(parsed, code);
+                    final int minor = widget.currency.toMinor(parsed, code);
                     if (minor > widget.row.amountMinor) {
                       return l10n.validationOverpayment(
-                        _currency.format(widget.row.amountMinor, code),
+                        widget.currency.format(widget.row.amountMinor, code),
                       );
                     }
                     return null;

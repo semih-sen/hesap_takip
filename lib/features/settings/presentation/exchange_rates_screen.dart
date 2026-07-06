@@ -8,6 +8,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/currency/amount_parsing.dart';
 import '../../../core/currency/currency.dart';
+import '../../../core/currency/currency_service.dart';
 import '../../../core/date/app_date.dart';
 import '../../../data/models/exchange_rate_entry.dart';
 import '../../../data/repositories/exchange_rate_repository.dart';
@@ -141,22 +142,30 @@ class ExchangeRatesScreen extends ConsumerWidget {
 }
 
 /// A small add-rate form returned as an [ExchangeRateEntry] (id 0, DB-assigned).
-class _ExchangeRateForm extends StatefulWidget {
+class _ExchangeRateForm extends ConsumerStatefulWidget {
   const _ExchangeRateForm();
 
   @override
-  State<_ExchangeRateForm> createState() => _ExchangeRateFormState();
+  ConsumerState<_ExchangeRateForm> createState() => _ExchangeRateFormState();
 }
 
-class _ExchangeRateFormState extends State<_ExchangeRateForm> {
+class _ExchangeRateFormState extends ConsumerState<_ExchangeRateForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _rateController = TextEditingController();
 
-  late String _from = CurrencyRegistry.all.first.code;
-  late String _to = CurrencyRegistry.all.length > 1
-      ? CurrencyRegistry.all[1].code
-      : CurrencyRegistry.all.first.code;
+  late String _from;
+  late String _to;
   DateTime _asOf = AppDate.today();
+  
+  @override
+  void initState() {
+    super.initState();
+    final CurrencyService currencyService = ref.read(currencyServiceProvider);
+    _from = currencyService.all.first.code;
+    _to = currencyService.all.length > 1
+        ? currencyService.all[1].code
+        : currencyService.all.first.code;
+  }
 
   @override
   void dispose() {
@@ -210,8 +219,9 @@ class _ExchangeRateFormState extends State<_ExchangeRateForm> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final CurrencyService currencyService = ref.read(currencyServiceProvider);
     final List<String> codes = <String>[
-      for (final Currency c in CurrencyRegistry.all) c.code,
+      for (final Currency c in currencyService.all) c.code,
     ]..sort();
 
     return Padding(

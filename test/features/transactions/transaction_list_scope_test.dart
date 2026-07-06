@@ -1,4 +1,6 @@
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:decimal/decimal.dart';
+import 'package:hesap_takip/core/date/app_date.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,13 +14,17 @@ import 'package:hesap_takip/data/database/app_database_provider.dart';
 import 'package:hesap_takip/data/database/tables/enums.dart';
 import 'package:hesap_takip/data/models/transaction.dart';
 import 'package:hesap_takip/data/models/transaction_filter.dart';
+import 'package:hesap_takip/features/transactions/application/summary_providers.dart';
 import 'package:hesap_takip/features/transactions/application/transactions_providers.dart';
+import 'package:hesap_takip/features/transactions/services/summary_period_value.dart';
 
 void main() {
   group('TransactionListFilter notifier (List scope)', () {
     late ProviderContainer container;
 
-    setUp(() => container = ProviderContainer());
+    setUp(() {
+      container = ProviderContainer();
+    });
     tearDown(() => container.dispose());
 
     test('initial() is unnarrowed and inactive', () {
@@ -107,8 +113,11 @@ void main() {
     setUp(() {
       database = db.AppDatabase.forTesting(NativeDatabase.memory());
       container = ProviderContainer(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+        ],
       );
+      container.read(summaryPeriodProvider.notifier).setAllTime();
     });
 
     tearDown(() async {
@@ -144,7 +153,7 @@ void main() {
           currencyCode: 'TRY',
           exchangeRateToBase: Decimal.one,
           baseAmountMinor: 1000,
-          valueDate: DateTime(2026, 7, 5),
+          valueDate: AppDate.today(),
         ),
       );
     }
@@ -158,9 +167,9 @@ void main() {
       amount: const Money(minorUnits: 1000, currencyCode: 'TRY'),
       exchangeRateToBase: Decimal.one,
       baseAmountMinor: 1000,
-      valueDate: DateTime(2026, 7, 5),
-      createdAt: DateTime(2026, 7, 5),
-      updatedAt: DateTime(2026, 7, 5),
+      valueDate: AppDate.today(),
+      createdAt: AppDate.today(),
+      updatedAt: AppDate.today(),
     );
 
     test('a queued delete is hidden then returns on undo', () async {
@@ -173,6 +182,7 @@ void main() {
       // wait for the first stream emission.
       container.listen(visibleTransactionsProvider, (_, _) {});
       await container.read(transactionListProvider.future);
+      await Future<void>.delayed(Duration.zero);
       expect(container.read(visibleTransactionsProvider).length, 1);
 
       // Queue a delete through the real UndoService (long window — no commit).
@@ -205,3 +215,4 @@ void main() {
     });
   });
 }
+

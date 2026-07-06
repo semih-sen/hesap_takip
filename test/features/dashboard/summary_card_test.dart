@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hesap_takip/app/theme/app_colors.dart';
 import 'package:hesap_takip/app/theme/app_theme.dart';
+import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:hesap_takip/features/dashboard/widgets/summary_card.dart';
 import 'package:hesap_takip/features/transactions/services/summary_data.dart';
@@ -10,7 +11,14 @@ import 'package:hesap_takip/l10n/generated/app_localizations.dart';
 /// Summary Card Refactor §A.8: the pure [SummaryCardBody] renders the 9 cells in
 /// tr_TR formatting and colors Row-1/Row-2 signed cells by sign.
 void main() {
-  const CurrencyService currency = CurrencyService();
+  const CurrencyService currency = CurrencyService(const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+
+]);
 
   // Deliberately mixed signs and all-distinct magnitudes so each figure maps to
   // a unique formatted string (negative Devreden + negative Bakiye).
@@ -127,8 +135,6 @@ void main() {
     ]) {
       expect(find.text(label), findsOneWidget);
     }
-    // Three middot separators between the four items.
-    expect(find.text('·'), findsNWidgets(3));
     // No render overflow was recorded while laying the card out.
     expect(tester.takeException(), isNull);
   });

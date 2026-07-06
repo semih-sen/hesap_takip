@@ -120,3 +120,50 @@ final List<SeedCategory> kDefaultCategories = <SeedCategory>[
     iconCodePoint: Icons.category.codePoint,
   ),
 ];
+
+class SeedCurrency {
+  const SeedCurrency({
+    required this.code,
+    required this.symbol,
+    required this.minorDigits,
+    required this.symbolOnLeft,
+  });
+
+  final String code;
+  final String symbol;
+  final int minorDigits;
+  final bool symbolOnLeft;
+}
+
+const List<SeedCurrency> kDefaultCurrencies = <SeedCurrency>[
+  SeedCurrency(
+    code: 'TRY',
+    symbol: '₺',
+    minorDigits: 2,
+    symbolOnLeft: false,
+  ),
+  SeedCurrency(
+    code: 'USD',
+    symbol: r'$',
+    minorDigits: 2,
+    symbolOnLeft: true,
+  ),
+  SeedCurrency(
+    code: 'EUR',
+    symbol: '€',
+    minorDigits: 2,
+    symbolOnLeft: true,
+  ),
+  SeedCurrency(
+    code: 'GBP',
+    symbol: '£',
+    minorDigits: 2,
+    symbolOnLeft: true,
+  ),
+  SeedCurrency(
+    code: 'JPY',
+    symbol: '¥',
+    minorDigits: 0,
+    symbolOnLeft: true,
+  ),
+];

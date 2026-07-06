@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/currency/currency_service.dart';
 import '../../../../core/date/app_date.dart';
 import '../../../../core/undo/entity_actions.dart';
 import '../../../../core/undo/undo_service.dart';
@@ -249,6 +250,7 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final CurrencyService currencyService = ref.watch(currencyServiceProvider);
     final AsyncValue<List<TransactionListRow>> stream = ref.watch(
       transactionListProvider,
     );
@@ -307,7 +309,7 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
                           borderRadius: AppRadius.mdAll,
                           onTap: () => _edit(row),
                           onLongPress: () => _delete(row),
-                          child: TransactionListItem(row: row),
+                          child: TransactionListItem(row: row, currency: currencyService),
                         );
                         // Only pending income/expense are swipe-settleable
                         // ("Öde"/"Tahsil et"); everything else renders plainly.

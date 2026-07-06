@@ -1,3 +1,6 @@
+
+import 'package:hesap_takip/core/currency/currency.dart';
+import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -33,7 +36,17 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    repo = DriftTransactionRepository(db);
+    final CurrencyService currency = CurrencyService(
+      const [
+  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+
+],
+    );
+    repo = DriftTransactionRepository(db, currency);
   });
 
   tearDown(() async {
@@ -216,3 +229,5 @@ void main() {
     expect(s.incomeTotalMinor, 1000); // archived wallet's 9999 excluded (A-3)
   });
 }
+
+
