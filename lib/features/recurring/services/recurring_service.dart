@@ -39,11 +39,12 @@ class RecurringService {
   /// Idempotent: re-running for the same [now] inserts nothing new.
   Future<int> generateDueEntries(DateTime now) async {
     final DateTime today = AppDate.dateOnly(now);
+    final DateTime horizon = AppDate.addMonthsClamped(today, 6);
     final List<RecurringRule> rules = await _db.recurringDao.getActiveRules();
     final String base = (await _db.settingsDao.getSettings()).baseCurrencyCode;
     int totalInserted = 0;
     for (final RecurringRule rule in rules) {
-      totalInserted += await _generateForRule(rule, today, base);
+      totalInserted += await _generateForRule(rule, today, horizon, base);
     }
     return totalInserted;
   }
@@ -51,6 +52,7 @@ class RecurringService {
   Future<int> _generateForRule(
     RecurringRule rule,
     DateTime today,
+    DateTime horizon,
     String base,
   ) async {
     final DateTime start = AppDate.dateOnly(rule.startDate);
@@ -71,7 +73,7 @@ class RecurringService {
         break;
       }
       final DateTime? next = nextOccurrenceAfter(anchor, rule);
-      if (next == null || next.isAfter(today)) {
+      if (next == null || next.isAfter(horizon)) {
         break;
       }
       if (endDate != null && next.isAfter(endDate)) {
@@ -83,6 +85,7 @@ class RecurringService {
       }
 
       final _RateSnapshot snap = await _resolveSnapshot(rule, base, next);
+      final bool isProjected = next.isAfter(today);
       bool didInsert = false;
       try {
         await _db.transaction(() async {
@@ -91,10 +94,9 @@ class RecurringService {
               walletId: rule.walletId,
               type: rule.type,
               flowDirection: rule.flowDirection,
-              // Explicit override: generation only ever produces on-or-before
-              // -today occurrences, so without this a non-autoPost row would be
-              // classified completed by a date-derived status (B.2).
-              status: rule.autoPost
+              // Explicit override: generation now projects into the future,
+              // so any future transaction must be pending.
+              status: (rule.autoPost && !isProjected)
                   ? TransactionStatus.completed
                   : TransactionStatus.pending,
               amountMinor: rule.amountMinor,

@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../data/database/tables/enums.dart';
+import '../../../../data/models/account.dart';
 import '../../../../data/models/category.dart';
 import '../../../../data/models/transaction_filter.dart';
 import '../../../../data/models/wallet.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../accounts/application/accounts_providers.dart';
 import '../../../categories/application/categories_providers.dart';
 import '../../../shared/entity_labels.dart';
 import '../../../wallets/application/wallets_providers.dart';
@@ -61,6 +63,11 @@ class _TransactionFilterSheetState
     final TransactionFilter filter = ref.watch(transactionListFilterProvider);
     final List<Wallet> wallets =
         ref.watch(allWalletsProvider).asData?.value ?? const <Wallet>[];
+    final List<Account> accounts = ref.watch(visibleAccountsProvider);
+    
+    final Map<int, String> accountNameMap = {
+      for (final Account acc in accounts) acc.id: acc.name
+    };
     final List<Category> categories = ref
         .watch(visibleCategoriesProvider)
         .where((Category c) => !c.isArchived)
@@ -141,6 +148,17 @@ class _TransactionFilterSheetState
                   ),
               ],
             ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: <Widget>[
+                FilterChip(
+                  label: const Text('Show Transfers'), // Assuming localized or hardcoded
+                  selected: filter.showTransfers,
+                  onSelected: (bool selected) => _notifier.setShowTransfers(selected),
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.lg),
 
             // ----- Status -----
@@ -176,7 +194,7 @@ class _TransactionFilterSheetState
                 children: <Widget>[
                   for (final Wallet w in wallets)
                     FilterChip(
-                      label: Text('${w.name} (${w.currencyCode})'),
+                      label: Text('${accountNameMap[w.accountId] ?? 'Unknown'} / ${w.name} (${w.currencyCode})'),
                       selected: filter.walletIds.contains(w.id),
                       onSelected: (_) => _notifier.setWallets(
                         _toggled(filter.walletIds, w.id),

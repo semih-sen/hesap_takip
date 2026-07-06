@@ -526,6 +526,11 @@ class TransactionDao extends DatabaseAccessor<AppDatabase>
         ..add(Variable.withString(like));
     }
 
+    if (!filter.showTransfers) {
+      where.add('t.type != ?');
+      vars.add(Variable.withInt(TransactionType.transfer.index));
+    }
+
     final String whereSql = where.isEmpty
         ? ''
         : 'WHERE ${where.join(' AND ')} ';

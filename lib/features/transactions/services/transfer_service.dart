@@ -172,6 +172,8 @@ class TransferService {
     required DateTime valueDate,
     required String? note,
   }) async {
+    final bool isCrossAccount = wallets.from.accountId != wallets.to.accountId;
+
     // OUT leg — source wallet, its own currency → base snapshot.
     final Decimal outRate = await _rateToBase(
       wallets.from.currencyCode,
@@ -181,6 +183,7 @@ class TransferService {
     await _db.transactionDao.createTransaction(
       _leg(
         walletId: wallets.from.id,
+        type: isCrossAccount ? TransactionType.expense : TransactionType.transfer,
         flow: FlowDirection.outflow,
         amountMinor: fromAmountMinor,
         currencyCode: wallets.from.currencyCode,
@@ -205,6 +208,7 @@ class TransferService {
     await _db.transactionDao.createTransaction(
       _leg(
         walletId: wallets.to.id,
+        type: isCrossAccount ? TransactionType.income : TransactionType.transfer,
         flow: FlowDirection.inflow,
         amountMinor: toAmountMinor,
         currencyCode: wallets.to.currencyCode,
@@ -224,6 +228,7 @@ class TransferService {
 
   TransactionsCompanion _leg({
     required int walletId,
+    required TransactionType type,
     required FlowDirection flow,
     required int amountMinor,
     required String currencyCode,
@@ -235,7 +240,7 @@ class TransferService {
   }) {
     return TransactionsCompanion.insert(
       walletId: walletId,
-      type: TransactionType.transfer,
+      type: type,
       flowDirection: flow,
       status: TransactionStatus.completed,
       amountMinor: amountMinor,

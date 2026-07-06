@@ -10,6 +10,8 @@ import '../../../data/database/daos/transaction_dao.dart';
 import '../../../data/database/tables/enums.dart';
 import '../../../data/models/transaction_filter.dart';
 import '../../../data/repositories/transaction_repository.dart';
+import '../../../data/models/wallet.dart';
+import '../../wallets/application/wallets_providers.dart';
 import '../services/summary_period_value.dart';
 import 'summary_providers.dart';
 
@@ -166,6 +168,9 @@ class TransactionListFilter extends _$TransactionListFilter {
   void setStatus(TransactionStatus? status) =>
       state = state.copyWith(status: status);
 
+  void setShowTransfers(bool show) =>
+      state = state.copyWith(showTransfers: show);
+
   void setSearch(String query) => state = state.copyWith(search: query);
 
   void reset() => state = TransactionFilter.initial();
@@ -194,6 +199,8 @@ class TransactionListWindow extends _$TransactionListWindow {
 @riverpod
 Stream<List<TransactionListRow>> transactionList(Ref ref) {
   final TransactionFilter filter = ref.watch(transactionListFilterProvider);
+  final Set<int> accountSelection = ref.watch(summaryAccountSelectionProvider);
+  final List<Wallet> allWallets = ref.watch(allWalletsProvider).value ?? const <Wallet>[];
   final SummaryPeriodValue period = ref.watch(summaryPeriodProvider);
   final int pageCount = ref.watch(transactionListWindowProvider);
 
@@ -205,7 +212,27 @@ Stream<List<TransactionListRow>> transactionList(Ref ref) {
   final DateRange range = period.range;
   final bool carryForward =
       !range.start.isAfter(today) && !range.end.isBefore(today);
-  final TransactionFilter effective = filter.copyWith(range: range);
+  
+  Set<int> resolvedWalletIds = filter.walletIds;
+  if (accountSelection.isNotEmpty) {
+      final Set<int> accountWalletIds = {
+        for (final Wallet w in allWallets)
+          if (!w.isArchived && accountSelection.contains(w.accountId)) w.id,
+      };
+      
+      if (resolvedWalletIds.isNotEmpty) {
+         resolvedWalletIds = resolvedWalletIds.intersection(accountWalletIds);
+      } else {
+         resolvedWalletIds = accountWalletIds;
+      }
+  }
+
+  // Short-circuit if an account is selected but has no active wallets
+  if (accountSelection.isNotEmpty && resolvedWalletIds.isEmpty) {
+     return Stream<List<TransactionListRow>>.value(const <TransactionListRow>[]);
+  }
+
+  final TransactionFilter effective = filter.copyWith(range: range, walletIds: resolvedWalletIds);
 
   return ref
       .watch(transactionRepositoryProvider)

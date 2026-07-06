@@ -34,6 +34,9 @@ abstract class TransactionFilter with _$TransactionFilter {
 
     /// Free-text search over note / payee / category name; blank = no search.
     @Default('') String search,
+
+    /// Whether to include transfers in the results. Default is false.
+    @Default(false) bool showTransfers,
   }) = _TransactionFilter;
 
   const TransactionFilter._();

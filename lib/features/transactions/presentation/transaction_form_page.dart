@@ -21,6 +21,7 @@ import '../../accounts/application/accounts_providers.dart';
 import '../../categories/application/categories_providers.dart';
 import '../../shared/entity_labels.dart';
 import '../../wallets/application/wallets_providers.dart';
+import '../services/balance_service.dart';
 import 'transaction_form_theme.dart';
 
 /// Create/edit an income or expense transaction (PROJECT_PLAN §5.2–§5.3).
@@ -446,10 +447,22 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                 .map(
                   (Wallet w) => DropdownMenuItem<int>(
                     value: w.id,
-                    child: Text(
-                      '${accountNames[w.accountId] ?? ''} / ${w.name} '
-                      '(${w.currencyCode})',
-                      overflow: TextOverflow.ellipsis,
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final AsyncValue<int> balanceAsync = ref.watch(walletBalanceProvider(w.id));
+                        final String balanceText = balanceAsync.when(
+                          data: (int balance) {
+                            final String formatted = _currency.format(balance, w.currencyCode);
+                            return ' (Bakiye: $formatted)'; // Hardcoded Turkish fallback for balance
+                          },
+                          loading: () => ' (...)',
+                          error: (_, __) => ' (!)',
+                        );
+                        return Text(
+                          '${accountNames[w.accountId] ?? ''} / ${w.name}$balanceText',
+                          overflow: TextOverflow.ellipsis,
+                        );
+                      },
                     ),
                   ),
                 )

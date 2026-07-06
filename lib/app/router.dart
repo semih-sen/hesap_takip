@@ -87,14 +87,18 @@ class _ScaffoldWithNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool isDashboard = navigationShell.currentIndex == 0;
+    final bool isKeyboardClosed = MediaQuery.of(context).viewInsets.bottom == 0;
     return Scaffold(
       body: navigationShell,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addTransaction(context),
-        tooltip: l10n.transactionAdd,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: (isDashboard && isKeyboardClosed)
+          ? FloatingActionButton(
+              onPressed: () => _addTransaction(context),
+              tooltip: l10n.transactionAdd,
+              child: const Icon(Icons.add),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: _onDestinationSelected,
