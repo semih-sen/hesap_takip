@@ -90,6 +90,10 @@
   "@accountNameLabel": { "description": "Account name field label." },
   "accountTypeLabel": "Hesap türü",
   "@accountTypeLabel": { "description": "Account type field label." },
+  "accountDefaultLabel": "Varsayılan hesap",
+  "@accountDefaultLabel": { "description": "Label for the default-account toggle." },
+  "accountDefaultHint": "Gösterge paneli bu hesapla açılır",
+  "@accountDefaultHint": { "description": "Subtitle for the default-account toggle." },
   "accountDeleted": "{name} silindi",
   "@accountDeleted": {
     "description": "SnackBar text after queuing an account delete.",

@@ -102,6 +102,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get accountTypeLabel => 'Hesap türü';
 
   @override
+  String get accountDefaultLabel => 'Varsayılan hesap';
+
+  @override
+  String get accountDefaultHint => 'Gösterge paneli bu hesapla açılır';
+
+  @override
   String accountDeleted(String name) {
     return '$name silindi';
   }

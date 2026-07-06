@@ -28,6 +28,7 @@ class _AccountFormPageState extends ConsumerState<AccountFormPage> {
   late AccountType _type;
   late int _colorValue;
   late int _iconCodePoint;
+  late bool _isDefault;
   bool _saving = false;
 
   bool get _isEdit => widget.account != null;
@@ -41,6 +42,7 @@ class _AccountFormPageState extends ConsumerState<AccountFormPage> {
     _colorValue = a?.colorValue ?? Appearance.colors.first;
     _iconCodePoint =
         a?.iconCodePoint ?? Appearance.accountIcons.first.codePoint;
+    _isDefault = a?.isDefault ?? false;
   }
 
   @override
@@ -66,23 +68,31 @@ class _AccountFormPageState extends ConsumerState<AccountFormPage> {
           type: _type,
           colorValue: _colorValue,
           iconCodePoint: _iconCodePoint,
+          isDefault: _isDefault,
           updatedAt: now,
         ),
       );
+      if (_isDefault) {
+        await repo.setDefaultAccount(widget.account!.id);
+      }
     } else {
-      await repo.createAccount(
+      final int newId = await repo.createAccount(
         Account(
           id: 0,
           name: name,
           type: _type,
           colorValue: _colorValue,
           iconCodePoint: _iconCodePoint,
+          isDefault: _isDefault,
           isArchived: false,
           sortOrder: 0,
           createdAt: now,
           updatedAt: now,
         ),
       );
+      if (_isDefault) {
+        await repo.setDefaultAccount(newId);
+      }
     }
     if (!mounted) {
       return;
@@ -136,6 +146,14 @@ class _AccountFormPageState extends ConsumerState<AccountFormPage> {
                 },
               ),
               const SizedBox(height: AppSpacing.xl),
+              SwitchListTile(
+                title: Text(l10n.accountDefaultLabel),
+                subtitle: Text(l10n.accountDefaultHint),
+                value: _isDefault,
+                onChanged: (bool value) =>
+                    setState(() => _isDefault = value),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               Text(
                 l10n.colorLabel,
                 style: Theme.of(context).textTheme.labelLarge,

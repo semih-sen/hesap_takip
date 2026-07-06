@@ -16,6 +16,7 @@ abstract class Account with _$Account {
     required AccountType type,
     required int colorValue,
     required int iconCodePoint,
+    @Default(false) bool isDefault,
     required bool isArchived,
     required int sortOrder,
     required DateTime createdAt,

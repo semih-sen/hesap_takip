@@ -261,4 +261,133 @@ void main() {
     await undo.flushAllNow();
     expect((await db.transactionDao.getTransferLegs(groupId)), isEmpty);
   });
+
+  group('auto-append transfer details to notes', () {
+    test('same-account transfer: note includes wallet names', () async {
+      final int account = await seedAccount();
+      final int w1 = await seedWallet(account);
+      final int w2 = await seedWallet(account);
+
+      final String groupId = await service.createTransfer(
+        fromWalletId: w1,
+        toWalletId: w2,
+        fromAmountMinor: 5000,
+        toAmountMinor: 5000,
+        rate: Decimal.one,
+        valueDate: date,
+      );
+
+      final List<Transaction> legs =
+          await db.transactionDao.getTransferLegs(groupId);
+      // Both legs should have the same note with transfer detail.
+      for (final Transaction leg in legs) {
+        expect(leg.note, contains('Transfer:'));
+        expect(leg.note, contains('Cüzdan-TRY'));
+        expect(leg.note, contains('->'));
+      }
+    });
+
+    test('cross-account transfer: note includes account/wallet names',
+        () async {
+      final int account1 = await db.accountDao.createAccount(
+        AccountsCompanion.insert(
+          name: 'Banka1',
+          type: AccountType.bank,
+          colorValue: 0xFF000000,
+          iconCodePoint: 0xE000,
+        ),
+      );
+      final int account2 = await db.accountDao.createAccount(
+        AccountsCompanion.insert(
+          name: 'Banka2',
+          type: AccountType.bank,
+          colorValue: 0xFF111111,
+          iconCodePoint: 0xE001,
+        ),
+      );
+      final int w1 = await db.walletDao.createWallet(
+        WalletsCompanion.insert(
+          accountId: account1,
+          name: 'TL Hesap',
+          currencyCode: 'TRY',
+          colorValue: 0xFF222222,
+          iconCodePoint: 0xE002,
+        ),
+      );
+      final int w2 = await db.walletDao.createWallet(
+        WalletsCompanion.insert(
+          accountId: account2,
+          name: 'Dolar Hesap',
+          currencyCode: 'USD',
+          colorValue: 0xFF333333,
+          iconCodePoint: 0xE003,
+        ),
+      );
+
+      final String groupId = await service.createTransfer(
+        fromWalletId: w1,
+        toWalletId: w2,
+        fromAmountMinor: 10000,
+        toAmountMinor: 300,
+        rate: Decimal.parse('0.03'),
+        valueDate: date,
+      );
+
+      final List<Transaction> legs =
+          await db.transactionDao.getTransferLegs(groupId);
+      for (final Transaction leg in legs) {
+        expect(leg.note, contains('Transfer: Banka1/TL Hesap -> Banka2/Dolar Hesap'));
+      }
+    });
+
+    test('null note: transfer detail becomes the sole note', () async {
+      final int account = await seedAccount();
+      final int w1 = await seedWallet(account);
+      final int w2 = await seedWallet(account);
+
+      final String groupId = await service.createTransfer(
+        fromWalletId: w1,
+        toWalletId: w2,
+        fromAmountMinor: 1000,
+        toAmountMinor: 1000,
+        rate: Decimal.one,
+        valueDate: date,
+        note: null,
+      );
+
+      final List<Transaction> legs =
+          await db.transactionDao.getTransferLegs(groupId);
+      for (final Transaction leg in legs) {
+        // Note should be exactly the transfer detail, no leading newline.
+        expect(leg.note, isNotNull);
+        expect(leg.note, startsWith('Transfer:'));
+        expect(leg.note!.contains('\n'), isFalse);
+      }
+    });
+
+    test('user-provided note: transfer detail appended after newline',
+        () async {
+      final int account = await seedAccount();
+      final int w1 = await seedWallet(account);
+      final int w2 = await seedWallet(account);
+
+      final String groupId = await service.createTransfer(
+        fromWalletId: w1,
+        toWalletId: w2,
+        fromAmountMinor: 2000,
+        toAmountMinor: 2000,
+        rate: Decimal.one,
+        valueDate: date,
+        note: 'Kira ödemesi',
+      );
+
+      final List<Transaction> legs =
+          await db.transactionDao.getTransferLegs(groupId);
+      for (final Transaction leg in legs) {
+        expect(leg.note, startsWith('Kira ödemesi'));
+        expect(leg.note, contains('\n'));
+        expect(leg.note, contains('Transfer:'));
+      }
+    });
+  });
 }

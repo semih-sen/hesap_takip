@@ -9,6 +9,7 @@ class Accounts extends Table {
   IntColumn get type => intEnum<AccountType>()();
   IntColumn get colorValue => integer()(); // ARGB int
   IntColumn get iconCodePoint => integer()();
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();

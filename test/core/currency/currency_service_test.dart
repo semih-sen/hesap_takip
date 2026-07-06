@@ -64,25 +64,60 @@ void main() {
     });
   });
 
-  group('format (tr_TR)', () {
-    test('TRY: Turkish grouping, symbol, 2 decimals', () {
+  group('format (tr_TR) — symbol positioning', () {
+    test('TRY: symbol on the RIGHT (symbolOnLeft: false)', () {
       final String formatted = service.format(123456, 'TRY');
-      expect(formatted, contains('1.234,56'));
-      expect(formatted, contains('₺'));
+      // Exact expected: "1.234,56₺"
+      expect(formatted, '1.234,56₺');
+      // Symbol must be on the right (string ends with symbol).
+      expect(formatted.endsWith('₺'), isTrue);
+      expect(formatted.startsWith('₺'), isFalse);
     });
 
-    test('USD: Turkish grouping with the dollar symbol', () {
+    test('USD: symbol on the LEFT (symbolOnLeft: true)', () {
       final String formatted = service.format(123456, 'USD');
-      expect(formatted, contains('1.234,56'));
-      expect(formatted, contains(r'$'));
+      // Exact expected: "\$1.234,56"
+      expect(formatted, '\$1.234,56');
+      // Symbol must be on the left (string starts with symbol).
+      expect(formatted.startsWith(r'$'), isTrue);
+      expect(formatted.endsWith(r'$'), isFalse);
     });
 
-    test('JPY: no decimals, Turkish grouping', () {
+    test('EUR: symbol on the RIGHT (symbolOnLeft: false)', () {
+      final String formatted = service.format(123456, 'EUR');
+      expect(formatted, '1.234,56€');
+      expect(formatted.endsWith('€'), isTrue);
+      expect(formatted.startsWith('€'), isFalse);
+    });
+
+    test('GBP: symbol on the LEFT (symbolOnLeft: true)', () {
+      final String formatted = service.format(123456, 'GBP');
+      expect(formatted, '£1.234,56');
+      expect(formatted.startsWith('£'), isTrue);
+      expect(formatted.endsWith('£'), isFalse);
+    });
+
+    test('JPY: symbol on the LEFT, no decimals (symbolOnLeft: true)', () {
       final String formatted = service.format(123456, 'JPY');
-      expect(formatted, contains('123.456'));
-      expect(formatted, contains('¥'));
+      expect(formatted, '¥123.456');
+      expect(formatted.startsWith('¥'), isTrue);
       // Zero-decimal currency prints no decimal separator.
       expect(formatted.contains(','), isFalse);
+    });
+
+    test('zero amount formats correctly with symbol positioning', () {
+      expect(service.format(0, 'TRY'), '0,00₺');
+      expect(service.format(0, 'USD'), '\$0,00');
+    });
+
+    test('negative amount preserves symbol positioning', () {
+      final String tryFormatted = service.format(-50000, 'TRY');
+      expect(tryFormatted, contains('₺'));
+      expect(tryFormatted, contains('500,00'));
+
+      final String usdFormatted = service.format(-50000, 'USD');
+      expect(usdFormatted, contains(r'$'));
+      expect(usdFormatted, contains('500,00'));
     });
   });
 

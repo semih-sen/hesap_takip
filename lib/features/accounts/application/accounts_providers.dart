@@ -27,3 +27,18 @@ List<Account> visibleAccounts(Ref ref) {
     refOf: (Account a) => EntityRef(UndoEntityType.account, a.id),
   );
 }
+
+/// The user's default account (isDefault == true), falling back to the first
+/// active account. Returns null only when no active accounts exist.
+@riverpod
+Account? defaultAccount(Ref ref) {
+  final List<Account> accounts =
+      ref.watch(accountsStreamProvider).asData?.value ?? const <Account>[];
+  final List<Account> active =
+      accounts.where((Account a) => !a.isArchived).toList(growable: false);
+  if (active.isEmpty) return null;
+  for (final Account a in active) {
+    if (a.isDefault) return a;
+  }
+  return active.first;
+}

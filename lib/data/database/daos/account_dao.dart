@@ -26,6 +26,16 @@ class AccountDao extends DatabaseAccessor<AppDatabase> with _$AccountDaoMixin {
 
   Stream<List<Account>> watchAllAccounts() => _ordered().watch();
 
+  /// Clears any existing default flag, then marks [id] as the default account.
+  Future<void> setDefaultAccount(int id) async {
+    await (update(accounts)
+          ..where((t) => t.isDefault.equals(true)))
+        .write(const AccountsCompanion(isDefault: Value(false)));
+    await (update(accounts)
+          ..where((t) => t.id.equals(id)))
+        .write(const AccountsCompanion(isDefault: Value(true)));
+  }
+
   SimpleSelectStatement<$AccountsTable, Account> _ordered() =>
       select(accounts)..orderBy([(t) => OrderingTerm(expression: t.sortOrder)]);
 }

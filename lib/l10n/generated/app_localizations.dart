@@ -280,6 +280,18 @@ abstract class AppLocalizations {
   /// **'Hesap türü'**
   String get accountTypeLabel;
 
+  /// Label for the default-account toggle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Varsayılan hesap'**
+  String get accountDefaultLabel;
+
+  /// Subtitle for the default-account toggle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Gösterge paneli bu hesapla açılır'**
+  String get accountDefaultHint;
+
   /// SnackBar text after queuing an account delete.
   ///
   /// In tr, this message translates to:

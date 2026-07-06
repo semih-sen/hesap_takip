@@ -28,6 +28,9 @@ abstract interface class AccountRepository {
 
   /// Hard-deletes the account (blocked by FK if wallets still reference it).
   Future<void> deleteAccount(int id);
+
+  /// Marks [id] as the default account (clearing any other default).
+  Future<void> setDefaultAccount(int id);
 }
 
 class DriftAccountRepository implements AccountRepository {
@@ -65,6 +68,9 @@ class DriftAccountRepository implements AccountRepository {
 
   @override
   Future<void> deleteAccount(int id) => _db.accountDao.deleteAccount(id);
+
+  @override
+  Future<void> setDefaultAccount(int id) => _db.accountDao.setDefaultAccount(id);
 }
 
 /// App-lifetime singleton account repository.

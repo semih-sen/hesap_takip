@@ -14,6 +14,7 @@ extension AccountRowMapper on db.Account {
     type: type,
     colorValue: colorValue,
     iconCodePoint: iconCodePoint,
+    isDefault: isDefault,
     isArchived: isArchived,
     sortOrder: sortOrder,
     createdAt: createdAt,
@@ -29,6 +30,7 @@ extension AccountDomainMapper on Account {
     type: type,
     colorValue: colorValue,
     iconCodePoint: iconCodePoint,
+    isDefault: isDefault,
     isArchived: isArchived,
     sortOrder: sortOrder,
     createdAt: createdAt,
@@ -42,6 +44,7 @@ extension AccountDomainMapper on Account {
     type: type,
     colorValue: colorValue,
     iconCodePoint: iconCodePoint,
+    isDefault: Value(isDefault),
     isArchived: Value(isArchived),
     sortOrder: Value(sortOrder),
   );

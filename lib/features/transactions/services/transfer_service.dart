@@ -174,6 +174,26 @@ class TransferService {
   }) async {
     final bool isCrossAccount = wallets.from.accountId != wallets.to.accountId;
 
+    // Build the transfer detail text to auto-append to the note.
+    String transferDetail;
+    if (isCrossAccount) {
+      final Account? fromAccount =
+          await _db.accountDao.getAccountById(wallets.from.accountId);
+      final Account? toAccount =
+          await _db.accountDao.getAccountById(wallets.to.accountId);
+      final String fromLabel =
+          '${fromAccount?.name ?? '?'}/${wallets.from.name}';
+      final String toLabel =
+          '${toAccount?.name ?? '?'}/${wallets.to.name}';
+      transferDetail = 'Transfer: $fromLabel -> $toLabel';
+    } else {
+      transferDetail =
+          'Transfer: ${wallets.from.name} -> ${wallets.to.name}';
+    }
+    final String effectiveNote = note == null || note.isEmpty
+        ? transferDetail
+        : '$note\n$transferDetail';
+
     // OUT leg — source wallet, its own currency → base snapshot.
     final Decimal outRate = await _rateToBase(
       wallets.from.currencyCode,
@@ -195,7 +215,7 @@ class TransferService {
           outRate,
         ),
         valueDate: valueDate,
-        note: note,
+        note: effectiveNote,
         groupId: groupId,
       ),
     );
@@ -220,7 +240,7 @@ class TransferService {
           inRate,
         ),
         valueDate: valueDate,
-        note: note,
+        note: effectiveNote,
         groupId: groupId,
       ),
     );

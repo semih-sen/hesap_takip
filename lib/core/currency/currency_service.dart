@@ -72,15 +72,22 @@ class CurrencyService {
     return toMinor(converted, toCode);
   }
 
-  /// Formats [minor] units of [code] with `tr_TR` grouping by default.
+  /// Formats [minor] units of [code] with locale-aware grouping.
+  ///
+  /// Symbol placement respects [Currency.symbolOnLeft] rather than the
+  /// locale's default currency pattern, fixing the bug where TRY's ₺
+  /// appeared on the left instead of the right.
   String format(int minor, String code, {Locale? locale}) {
     final Currency currency = byCode(code);
-    final NumberFormat formatter = NumberFormat.currency(
-      locale: locale?.toString() ?? 'tr_TR',
-      symbol: currency.symbol,
+    final String localeStr = locale?.toString() ?? 'tr_TR';
+    final NumberFormat formatter = NumberFormat.decimalPatternDigits(
+      locale: localeStr,
       decimalDigits: currency.minorDigits,
     );
-    return formatter.format(fromMinor(minor, code).toDouble());
+    final String number = formatter.format(fromMinor(minor, code).toDouble());
+    return currency.symbolOnLeft
+        ? '${currency.symbol}$number'
+        : '$number${currency.symbol}';
   }
 
   int _roundHalfUp(Decimal value) {
