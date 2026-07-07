@@ -113,6 +113,9 @@ class _RecurringRuleFormPageState extends ConsumerState<RecurringRuleFormPage> {
       _noteController.text = source.note ?? '';
       // Prefill categories once the widget is mounted (async).
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadCategories());
+    } else {
+      // Default occurrences count for new rules.
+      _maxOccurrencesController.text = '24';
     }
   }
 

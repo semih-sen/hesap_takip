@@ -9,6 +9,7 @@ import '../../../core/undo/undoable_action.dart';
 import '../../../data/database/daos/transaction_dao.dart';
 import '../../../data/database/tables/enums.dart';
 import '../../../data/models/transaction_filter.dart';
+import '../../../data/repositories/settings_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../data/models/wallet.dart';
 import '../../wallets/application/wallets_providers.dart';
@@ -59,6 +60,8 @@ class TransactionListRow {
     this.isOverdue = false,
     this.counterWalletName,
     this.isRecurring = false,
+    required this.baseAmountMinor,
+    required this.baseCurrencyCode,
   });
 
   final int id;
@@ -98,6 +101,13 @@ class TransactionListRow {
   final bool isOverdue;
   final String? counterWalletName;
   final bool isRecurring;
+
+  /// The transaction amount converted to the app's base currency.
+  final int baseAmountMinor;
+
+  /// The app's base currency code (e.g. 'TRY') — used to format
+  /// [baseAmountMinor] when it differs from [currencyCode].
+  final String baseCurrencyCode;
 }
 
 /// Semantic accent (ARGB int) for a transaction with no category color.
@@ -107,18 +117,17 @@ int _accentForType(TransactionType type) => switch (type) {
   TransactionType.transfer => AppColors.transfer.toARGB32(),
 };
 
-TransactionListRow _toRow(TransactionListRowData d) {
+TransactionListRow _toRow(TransactionListRowData d, String baseCurrencyCode) {
   final TransactionRowCategory? primary = d.categories.isEmpty
       ? null
       : d.categories.first;
   // Pending/overdue are DERIVED here (where "today" is known) and passed as
   // flags so the pure list item never reads a clock or a provider (§5.1).
   final bool isPending = d.status == TransactionStatus.pending;
-  final bool isOverdue =
-      isPending && d.valueDate.isBefore(AppDate.today());
+  final bool isOverdue = isPending && d.valueDate.isBefore(AppDate.today());
   return TransactionListRow(
     id: d.id,
-    title: primary?.name ?? d.payee,
+    title: d.note,
     amountMinor: d.amountMinor,
     currencyCode: d.currencyCode,
     flowDirection: d.flowDirection,
@@ -138,6 +147,8 @@ TransactionListRow _toRow(TransactionListRowData d) {
     isOverdue: isOverdue,
     counterWalletName: d.counterWalletName,
     isRecurring: d.isRecurring,
+    baseAmountMinor: d.baseAmountMinor,
+    baseCurrencyCode: baseCurrencyCode,
   );
 }
 
@@ -200,7 +211,8 @@ class TransactionListWindow extends _$TransactionListWindow {
 Stream<List<TransactionListRow>> transactionList(Ref ref) {
   final TransactionFilter filter = ref.watch(transactionListFilterProvider);
   final Set<int> accountSelection = ref.watch(summaryAccountSelectionProvider);
-  final List<Wallet> allWallets = ref.watch(allWalletsProvider).value ?? const <Wallet>[];
+  final List<Wallet> allWallets =
+      ref.watch(allWalletsProvider).value ?? const <Wallet>[];
   final SummaryPeriodValue period = ref.watch(summaryPeriodProvider);
   final int pageCount = ref.watch(transactionListWindowProvider);
 
@@ -212,27 +224,31 @@ Stream<List<TransactionListRow>> transactionList(Ref ref) {
   final DateRange range = period.range;
   final bool carryForward =
       !range.start.isAfter(today) && !range.end.isBefore(today);
-  
+
   Set<int> resolvedWalletIds = filter.walletIds;
   if (accountSelection.isNotEmpty) {
-      final Set<int> accountWalletIds = {
-        for (final Wallet w in allWallets)
-          if (!w.isArchived && accountSelection.contains(w.accountId)) w.id,
-      };
-      
-      if (resolvedWalletIds.isNotEmpty) {
-         resolvedWalletIds = resolvedWalletIds.intersection(accountWalletIds);
-      } else {
-         resolvedWalletIds = accountWalletIds;
-      }
+    final Set<int> accountWalletIds = {
+      for (final Wallet w in allWallets)
+        if (!w.isArchived && accountSelection.contains(w.accountId)) w.id,
+    };
+
+    if (resolvedWalletIds.isNotEmpty) {
+      resolvedWalletIds = resolvedWalletIds.intersection(accountWalletIds);
+    } else {
+      resolvedWalletIds = accountWalletIds;
+    }
   }
 
   // Short-circuit if an account is selected but has no active wallets
   if (accountSelection.isNotEmpty && resolvedWalletIds.isEmpty) {
-     return Stream<List<TransactionListRow>>.value(const <TransactionListRow>[]);
+    return Stream<List<TransactionListRow>>.value(const <TransactionListRow>[]);
   }
 
-  final TransactionFilter effective = filter.copyWith(range: range, walletIds: resolvedWalletIds);
+  final TransactionFilter effective = filter.copyWith(
+    range: range,
+    walletIds: resolvedWalletIds,
+  );
+  final String baseCurrency = ref.watch(baseCurrencyProvider);
 
   return ref
       .watch(transactionRepositoryProvider)
@@ -242,8 +258,9 @@ Stream<List<TransactionListRow>> transactionList(Ref ref) {
         carryForwardOverdue: carryForward,
       )
       .map(
-        (List<TransactionListRowData> rows) =>
-            rows.map(_toRow).toList(growable: false),
+        (List<TransactionListRowData> rows) => rows
+            .map((TransactionListRowData d) => _toRow(d, baseCurrency))
+            .toList(growable: false),
       );
 }
 

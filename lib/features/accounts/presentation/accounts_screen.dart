@@ -5,6 +5,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../data/models/account.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../transactions/presentation/transfer_form_page.dart';
 import '../application/accounts_providers.dart';
 import 'account_form_page.dart';
 import 'widgets/account_card.dart';
@@ -20,13 +21,28 @@ class AccountsScreen extends ConsumerWidget {
     ).push(MaterialPageRoute<void>(builder: (_) => const AccountFormPage()));
   }
 
+  void _addTransfer(BuildContext context) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const TransferFormPage()));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<List<Account>> stream = ref.watch(accountsStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.accountsTitle)),
+      appBar: AppBar(
+        title: Text(l10n.accountsTitle),
+        actions: <Widget>[
+          IconButton(
+            tooltip: l10n.transferAdd,
+            onPressed: () => _addTransfer(context),
+            icon: const Icon(Icons.swap_horiz),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addAccount(context),
         icon: const Icon(Icons.add),

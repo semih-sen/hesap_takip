@@ -28,6 +28,16 @@ class SummaryCard extends ConsumerWidget {
 
     return RepaintBoundary(
       child: Card(
+        shape: RoundedRectangleBorder(
+          // 2. Set the border color and width
+          //rgb(42, 59, 72)
+          side: const BorderSide(
+            color: Color.fromARGB(135, 42, 59, 72),
+            width: 1.0,
+          ),
+          // 3. Keep or adjust the rounded corners
+          borderRadius: BorderRadius.circular(6.0),
+        ),
         margin: EdgeInsets.zero,
         child: Padding(
           // Tightened vertical rhythm keeps the card compact (§A.2).
@@ -321,11 +331,7 @@ class _BreakdownLine extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              Text(
-                e.label,
-                style: labelStyle,
-                textAlign: TextAlign.center,
-              ),
+              Text(e.label, style: labelStyle, textAlign: TextAlign.center),
               const SizedBox(height: AppSpacing.xs / 2),
               FittedBox(
                 fit: BoxFit.scaleDown,

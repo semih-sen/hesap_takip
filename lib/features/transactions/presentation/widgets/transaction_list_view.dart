@@ -280,71 +280,57 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
           controller: _controller,
           slivers: <Widget>[
             for (final TransactionDateGroup group in groups)
-              SliverMainAxisGroup(
-                slivers: <Widget>[
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _DateHeaderDelegate(
-                      label: transactionDateGroupLabel(
-                        group.date,
-                        today: today,
-                        l10n: l10n,
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                ),
+                sliver: SliverList.separated(
+                  itemCount: group.rows.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (BuildContext context, int index) {
+                    final TransactionListRow row = group.rows[index];
+                    final Widget tile = InkWell(
+                      borderRadius: AppRadius.mdAll,
+                      onTap: () => _edit(row),
+                      onLongPress: () => _delete(row),
+                      child: TransactionListItem(row: row, currency: currencyService),
+                    );
+                    // Only pending income/expense are swipe-settleable
+                    // ("Öde"/"Tahsil et"); everything else renders plainly.
+                    final bool settleable =
+                        row.isPending &&
+                        (row.type == TransactionType.income ||
+                            row.type == TransactionType.expense);
+                    if (!settleable) {
+                      return KeyedSubtree(
+                        key: ValueKey<int>(row.id),
+                        child: tile,
+                      );
+                    }
+                    return Dismissible(
+                      key: ValueKey<String>('settle_${row.id}'),
+                      background: _SettleSwipeBackground(
+                        row: row,
+                        alignEnd: false,
                       ),
-                    ),
-                  ),
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      0,
-                      AppSpacing.lg,
-                      AppSpacing.sm,
-                    ),
-                    sliver: SliverList.separated(
-                      itemCount: group.rows.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (BuildContext context, int index) {
-                        final TransactionListRow row = group.rows[index];
-                        final Widget tile = InkWell(
-                          borderRadius: AppRadius.mdAll,
-                          onTap: () => _edit(row),
-                          onLongPress: () => _delete(row),
-                          child: TransactionListItem(row: row, currency: currencyService),
-                        );
-                        // Only pending income/expense are swipe-settleable
-                        // ("Öde"/"Tahsil et"); everything else renders plainly.
-                        final bool settleable =
-                            row.isPending &&
-                            (row.type == TransactionType.income ||
-                                row.type == TransactionType.expense);
-                        if (!settleable) {
-                          return KeyedSubtree(
-                            key: ValueKey<int>(row.id),
-                            child: tile,
-                          );
-                        }
-                        return Dismissible(
-                          key: ValueKey<String>('settle_${row.id}'),
-                          background: _SettleSwipeBackground(
-                            row: row,
-                            alignEnd: false,
-                          ),
-                          secondaryBackground: _SettleSwipeBackground(
-                            row: row,
-                            alignEnd: true,
-                          ),
-                          confirmDismiss: (DismissDirection _) async {
-                            await showSettleSheet(context, ref, row);
-                            // Never actually dismiss — the list updates
-                            // reactively from the DB after settling.
-                            return false;
-                          },
-                          child: tile,
-                        );
+                      secondaryBackground: _SettleSwipeBackground(
+                        row: row,
+                        alignEnd: true,
+                      ),
+                      confirmDismiss: (DismissDirection _) async {
+                        await showSettleSheet(context, ref, row);
+                        // Never actually dismiss — the list updates
+                        // reactively from the DB after settling.
+                        return false;
                       },
-                    ),
-                  ),
-                ],
+                      child: tile,
+                    );
+                  },
+                ),
               ),
             const SliverToBoxAdapter(
               child: SizedBox(height: 100), // Clearance for docked FAB

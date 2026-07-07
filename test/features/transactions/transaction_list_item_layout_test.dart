@@ -45,6 +45,8 @@ void main() {
       isOverdue: isOverdue,
       counterWalletName: counterWalletName,
       isRecurring: isRecurring,
+      baseAmountMinor: 125000,
+      baseCurrencyCode: 'TRY',
     );
   }
 
@@ -157,6 +159,8 @@ void main() {
           isOverdue: rows[i].isOverdue,
           counterWalletName: rows[i].counterWalletName,
           isRecurring: rows[i].isRecurring,
+          baseAmountMinor: rows[i].baseAmountMinor,
+          baseCurrencyCode: rows[i].baseCurrencyCode,
         ),
     ];
 

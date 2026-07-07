@@ -9,32 +9,24 @@ import '../../../../l10n/generated/app_localizations.dart';
 import '../../../shared/entity_labels.dart';
 import '../../application/transactions_providers.dart';
 
-/// The bespoke transaction row (PROJECT_PLAN §10.3). A **pure presentational**
-/// widget taking a single [TransactionListRow] — it reads no providers, so a
-/// large list rebuilds cheaply. Wrap instances with `ValueKey(row.id)`.
+/// Redesigned transaction card with a 3-row layout:
 ///
-/// Layout contract: a fixed-radius container with a left vertical accent stripe
-/// and a transparent accent-tinted background; a `Column` of Row 1 (title +
-/// colored amount), Row 2 (wallet/note + value date) and a contextual Row 3.
-/// Row 3 renders, in priority order: partial-payment progress > transfer
-/// counter-wallet > recurring chip > category chips. The progress/transfer/
-/// recurring variants render only from real fields (populated in Phases 8–10);
-/// they are never faked, so today the common case is the category chips.
+/// **Row 1**: Description (left) … [Status badge] + Amount (right)
+/// **Row 2**: Date + status badges (left) … Wallet name (right)
+/// **Row 3**: [🔁 recurring] + Category badges (left) … Foreign-currency
+///           equivalent (right, when the txn currency ≠ base currency)
 class TransactionListItem extends StatelessWidget {
-  const TransactionListItem({super.key, required this.row, required this.currency});
+  const TransactionListItem({
+    super.key,
+    required this.row,
+    required this.currency,
+  });
 
   final TransactionListRow row;
   final CurrencyService currency;
 
   /// Max category chips shown inline before collapsing the rest into a "+N".
   static const int _maxChips = 3;
-
-  /// Fixed height of the Row-3 slot. Always rendered (even when empty) so every
-  /// row — completed, pending, transfer, recurring, or bare — is the exact same
-  /// height. Sized to fit the tallest single-line Row-3 variant.
-  static const double _row3SlotHeight = 22;
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +36,6 @@ class TransactionListItem extends StatelessWidget {
         theme.extension<AppSemanticColors>() ?? AppSemanticColors.dark;
 
     final Color accent = Color(row.accentColorValue);
-    // The owning account's color — drives the stripe only (decoupled from the
-    // category/type accent that tints the background). See §10.3.
     final Color accountAccent = Color(row.accountColorValue);
     final Color amountColor = switch (row.type) {
       TransactionType.income => semantic.income,
@@ -61,7 +51,6 @@ class TransactionListItem extends StatelessWidget {
       'd MMM yyyy',
       'tr_TR',
     ).format(row.valueDate);
-    final String? secondary = _secondaryLine(title);
 
     return RepaintBoundary(
       child: Container(
@@ -74,8 +63,7 @@ class TransactionListItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              // Left vertical stripe = owning account's color (full height;
-              // corners clipped round). Decoupled from the background tint.
+              // Left vertical stripe = owning account's color.
               Container(width: 5, color: accountAccent),
               Expanded(
                 child: Padding(
@@ -87,68 +75,21 @@ class TransactionListItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      // Row 1: title + (pending badge) + amount.
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleMedium,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          // Pending borç/alacak badge lives here (§D.2) so Row 3
-                          // is free to always show categories.
-                          if (row.isPending &&
-                              (row.type == TransactionType.income ||
-                                  row.type == TransactionType.expense)) ...<Widget>[
-                            _PendingBadge(
-                              row: row,
-                              theme: theme,
-                              semantic: semantic,
-                              l10n: l10n,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                          ],
-                          Text(
-                            amountText,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: amountColor,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                      // ── Row 1: Description + [pending badge] + Amount ──
+                      _buildRow1(
+                        theme,
+                        semantic,
+                        l10n,
+                        title,
+                        amountText,
+                        amountColor,
                       ),
                       const SizedBox(height: 2),
-                      // Row 2: wallet (+ note/payee) and value date.
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              secondary == null
-                                  ? row.walletName
-                                  : '${row.walletName} · $secondary',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: semantic.textMuted,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            dateText,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: semantic.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Row 3 (contextual): partial-payment progress, transfer
-                      // counter-wallet, recurring chip, or category chips.
-                      ..._row3(context, theme, semantic, l10n),
+                      // ── Row 2: Date + status badges … Wallet name ──
+                      _buildRow2(theme, semantic, l10n, dateText),
+                      const SizedBox(height: AppSpacing.xs),
+                      // ── Row 3: [recurring] + categories … foreign amount ──
+                      _buildRow3(theme, semantic, l10n, amountColor),
                     ],
                   ),
                 ),
@@ -160,79 +101,168 @@ class TransactionListItem extends StatelessWidget {
     );
   }
 
-  /// The contextual third row, in priority order (§10.3): partial-payment
-  /// progress > transfer > recurring > category chips. The slot is rendered
-  /// **unconditionally** at a fixed [_row3SlotHeight] — even with no content —
-  /// so every row is identical height regardless of variant.
-  List<Widget> _row3(
-    BuildContext context,
+  // ────────────────────────────── Row 1 ──────────────────────────────
+
+  Widget _buildRow1(
     ThemeData theme,
     AppSemanticColors semantic,
     AppLocalizations l10n,
+    String title,
+    String amountText,
+    Color amountColor,
   ) {
-    final Widget? content = _row3Content(context, theme, semantic, l10n);
-    return <Widget>[
-      const SizedBox(height: AppSpacing.xs),
-      SizedBox(
-        height: _row3SlotHeight,
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: content ?? const SizedBox.shrink(),
-        ),
-      ),
-    ];
-  }
+    // Show a pending badge for receivable/payable/overdue types.
+    final bool showPendingBadge =
+        row.isPending &&
+        (row.type == TransactionType.income ||
+            row.type == TransactionType.expense);
 
-  Widget? _row3Content(
-    BuildContext context,
-    ThemeData theme,
-    AppSemanticColors semantic,
-    AppLocalizations l10n,
-  ) {
-    // The pending borç/alacak badge now lives in Row 1 (§D.2), so Row 3 is free
-    // to always show categories. Priority: transfer > recurring > categories.
-
-    // 1) Transfer → counter-wallet (Phase 8): renders only when present.
-    final String? counter = row.counterWalletName;
-    if (row.type == TransactionType.transfer && counter != null) {
-      return _MetaChip(
-        icon: Icons.swap_horiz,
-        label: l10n.transactionTransferTo(counter),
-        color: semantic.transfer,
-        theme: theme,
-      );
-    }
-
-    // 2) Recurring-generated → "Tekrarlayan" chip (Phase 10).
-    if (row.isRecurring) {
-      return _MetaChip(
-        icon: Icons.repeat,
-        label: l10n.transactionRecurringChip,
-        color: theme.colorScheme.primary,
-        theme: theme,
-      );
-    }
-
-    // 3) The common case → category chips.
-    if (row.categories.isNotEmpty) {
-      return _categoryChips(theme, semantic);
-    }
-    return null;
-  }
-
-  Widget _categoryChips(ThemeData theme, AppSemanticColors semantic) {
-    final List<CategoryChipData> shown = row.categories.length > _maxChips
-        ? row.categories.sublist(0, _maxChips)
-        : row.categories;
-    final int overflow = row.categories.length - shown.length;
-    // A non-wrapping Row (never grows vertically) keeps the fixed slot height
-    // valid by construction; each chip is Flexible so a narrow row truncates
-    // instead of overflowing. Trade-off: fewer chips fit before "+N" (§A.6).
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        for (int i = 0; i < shown.length; i++) ...<Widget>[
-          if (i > 0) const SizedBox(width: AppSpacing.xs + 2),
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleMedium,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        if (showPendingBadge) ...<Widget>[
+          _PendingIcon(row: row, theme: theme, semantic: semantic, l10n: l10n),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Text(
+          amountText,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: amountColor,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ────────────────────────────── Row 2 ──────────────────────────────
+
+  Widget _buildRow2(
+    ThemeData theme,
+    AppSemanticColors semantic,
+    AppLocalizations l10n,
+    String dateText,
+  ) {
+    // Settled status badges: "Ödendi" for completed expense, "Tahsil edildi"
+    // for completed income.
+    final List<Widget> badges = <Widget>[];
+    if (row.status == TransactionStatus.completed) {
+      if (row.type == TransactionType.expense) {
+        badges.add(
+          _StatusBadge(
+            label: l10n.settledExpense,
+            color: semantic.income,
+            theme: theme,
+          ),
+        );
+      } else if (row.type == TransactionType.income) {
+        badges.add(
+          _StatusBadge(
+            label: l10n.settledIncome,
+            color: semantic.income,
+            theme: theme,
+          ),
+        );
+      }
+    } else {
+      if (row.type == TransactionType.expense) {
+        badges.add(
+          _StatusBadge(
+            label: l10n.pendingChipDebt,
+            color: Colors.amber,
+            theme: theme,
+          ),
+        );
+      } else if (row.type == TransactionType.income) {
+        badges.add(
+          _StatusBadge(
+            label: l10n.pendingChipReceivable,
+            color: Colors.amber,
+            theme: theme,
+          ),
+        );
+      }
+    }
+
+    return Row(
+      children: <Widget>[
+        Text(
+          dateText,
+          style: theme.textTheme.bodySmall?.copyWith(color: semantic.textMuted),
+        ),
+        if (badges.isNotEmpty) ...<Widget>[
+          const SizedBox(width: AppSpacing.sm),
+          ...badges,
+        ],
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                row.walletName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: semantic.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ────────────────────────────── Row 3 ──────────────────────────────
+
+  Widget _buildRow3(
+    ThemeData theme,
+    AppSemanticColors semantic,
+    AppLocalizations l10n,
+    Color amountColor,
+  ) {
+    // Left side: [loop icon] + category chips.
+    final List<Widget> left = <Widget>[];
+
+    if (row.isRecurring) {
+      left.add(Icon(Icons.repeat, size: 14, color: theme.colorScheme.primary));
+      if (row.categories.isNotEmpty) {
+        left.add(const SizedBox(width: AppSpacing.sm));
+      }
+    }
+
+    // Transfer counter-wallet chip (if applicable).
+    if (row.type == TransactionType.transfer && row.counterWalletName != null) {
+      left.add(
+        Flexible(
+          child: _MetaChip(
+            icon: Icons.swap_horiz,
+            label: l10n.transactionTransferTo(row.counterWalletName!),
+            color: semantic.transfer,
+            theme: theme,
+          ),
+        ),
+      );
+    } else if (row.categories.isNotEmpty) {
+      // Category chips.
+      final List<CategoryChipData> shown = row.categories.length > _maxChips
+          ? row.categories.sublist(0, _maxChips)
+          : row.categories;
+      final int overflow = row.categories.length - shown.length;
+      for (int i = 0; i < shown.length; i++) {
+        if (i > 0 || left.isNotEmpty) {
+          left.add(const SizedBox(width: AppSpacing.xs + 2));
+        }
+        left.add(
           Flexible(
             child: _CategoryChip(
               chip: shown[i],
@@ -240,9 +270,11 @@ class TransactionListItem extends StatelessWidget {
               mutedColor: semantic.textMuted,
             ),
           ),
-        ],
-        if (overflow > 0) ...<Widget>[
-          const SizedBox(width: AppSpacing.xs + 2),
+        );
+      }
+      if (overflow > 0) {
+        left.add(const SizedBox(width: AppSpacing.xs + 2));
+        left.add(
           Text(
             '+$overflow',
             style: theme.textTheme.bodySmall?.copyWith(
@@ -250,29 +282,46 @@ class TransactionListItem extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
+        );
+      }
+    }
+
+    // Right side: foreign-currency equivalent (only when txn currency ≠ base).
+    Widget? foreignAmount;
+    if (row.currencyCode != row.baseCurrencyCode) {
+      final String fSign = row.flowDirection == FlowDirection.inflow
+          ? '+'
+          : '−';
+      final String baseFormatted = currency.format(
+        row.baseAmountMinor,
+        row.baseCurrencyCode,
+      );
+      foreignAmount = Text(
+        '$fSign$baseFormatted',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: semantic.textMuted,
+          fontWeight: FontWeight.w500,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 22,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: left.isEmpty ? <Widget>[const SizedBox.shrink()] : left,
+            ),
+          ),
+          if (foreignAmount != null) ...<Widget>[
+            const SizedBox(width: AppSpacing.sm),
+            foreignAmount,
+          ],
         ],
-      ],
+      ),
     );
-  }
-
-  /// The optional secondary text on Row 2: the note, else a payee that isn't
-  /// already the title (so it is not shown twice).
-  String? _secondaryLine(String title) {
-    
-   
-    final String? payee = _clean(row.payee);
-    if (payee != null && payee != title) {
-      return payee;
-    }
-    return null;
-  }
-
-  static String? _clean(String? value) {
-    if (value == null) {
-      return null;
-    }
-    final String trimmed = value.trim();
-    return trimmed.isEmpty ? null : trimmed;
   }
 }
 
@@ -325,12 +374,10 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-/// A compact Row-1 pill marking a pending borç/alacak item (§D.2). Same pill
-/// language as the category chip. An overdue item prepends a warning icon and is
-/// wrapped in a `Semantics`/`Tooltip` label ("Gecikmiş") — the due date is not
-/// repeated here (Row 2 already shows the value date). Pure presentational.
-class _PendingBadge extends StatelessWidget {
-  const _PendingBadge({
+/// A compact Row-1 pill marking a pending borç/alacak item. An overdue item
+/// prepends a warning icon and is wrapped in a `Semantics`/`Tooltip` label.
+class _PendingIcon extends StatelessWidget {
+  const _PendingIcon({
     required this.row,
     required this.theme,
     required this.semantic,
@@ -345,38 +392,15 @@ class _PendingBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isIncome = row.type == TransactionType.income;
-    final Color accent = isIncome ? semantic.income : semantic.expense;
-    final String label = isIncome
-        ? l10n.pendingChipReceivable
-        : l10n.pendingChipDebt;
+    //final Color accent = isIncome ? semantic.income : semantic.expense;
     final Widget pill = Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.14),
-        borderRadius: AppRadius.pillAll,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (row.isOverdue) ...<Widget>[
-            Icon(Icons.error_outline, size: 12, color: accent),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: accent,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
     );
     if (!row.isOverdue) {
       return pill;
     }
-    // Convey "Gecikmiş" to assistive tech + on long-press, without spending Row-1
-    // horizontal room on the text label.
     return Tooltip(
       message: l10n.pendingOverdue,
       child: Semantics(label: l10n.pendingOverdue, child: pill),
@@ -414,6 +438,40 @@ class _MetaChip extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A small status badge pill for completed settlements ("Ödendi"/"Tahsil edildi").
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({
+    required this.label,
+    required this.color,
+    required this.theme,
+  });
+
+  final String label;
+  final Color color;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: AppRadius.pillAll,
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

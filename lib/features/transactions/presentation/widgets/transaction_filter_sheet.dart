@@ -64,9 +64,9 @@ class _TransactionFilterSheetState
     final List<Wallet> wallets =
         ref.watch(allWalletsProvider).asData?.value ?? const <Wallet>[];
     final List<Account> accounts = ref.watch(visibleAccountsProvider);
-    
+
     final Map<int, String> accountNameMap = {
-      for (final Account acc in accounts) acc.id: acc.name
+      for (final Account acc in accounts) acc.id: acc.name,
     };
     final List<Category> categories = ref
         .watch(visibleCategoriesProvider)
@@ -153,9 +153,12 @@ class _TransactionFilterSheetState
               spacing: AppSpacing.sm,
               children: <Widget>[
                 FilterChip(
-                  label: const Text('Show Transfers'), // Assuming localized or hardcoded
+                  label: const Text(
+                    'Transferleri Göster',
+                  ), // Assuming localized or hardcoded
                   selected: filter.showTransfers,
-                  onSelected: (bool selected) => _notifier.setShowTransfers(selected),
+                  onSelected: (bool selected) =>
+                      _notifier.setShowTransfers(selected),
                 ),
               ],
             ),
@@ -194,7 +197,9 @@ class _TransactionFilterSheetState
                 children: <Widget>[
                   for (final Wallet w in wallets)
                     FilterChip(
-                      label: Text('${accountNameMap[w.accountId] ?? 'Unknown'} / ${w.name} (${w.currencyCode})'),
+                      label: Text(
+                        '${accountNameMap[w.accountId] ?? 'Unknown'} / ${w.name} (${w.currencyCode})',
+                      ),
                       selected: filter.walletIds.contains(w.id),
                       onSelected: (_) => _notifier.setWallets(
                         _toggled(filter.walletIds, w.id),

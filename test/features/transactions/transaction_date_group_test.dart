@@ -18,6 +18,8 @@ TransactionListRow rowOn(int id, DateTime date) => TransactionListRow(
   valueDate: date,
   accentColorValue: 0xFFFF6B6B,
   accountColorValue: 0xFF5B8DEF,
+  baseAmountMinor: 1000,
+  baseCurrencyCode: 'TRY',
 );
 
 void main() {

@@ -53,6 +53,8 @@ void main() {
       isOverdue: isOverdue,
       counterWalletName: counterWalletName,
       isRecurring: isRecurring,
+      baseAmountMinor: amountMinor,
+      baseCurrencyCode: 'TRY',
     );
   }
 
