@@ -15,17 +15,14 @@ import '../../../recurring/presentation/recurring_rule_form_page.dart';
 import '../../application/summary_providers.dart';
 import '../../application/transactions_providers.dart';
 import '../../services/summary_period_value.dart';
-import '../transaction_date_group.dart';
 import '../transaction_form_page.dart';
 import '../transfer_form_page.dart';
 import 'settle_sheet.dart';
 import 'transaction_list_item.dart';
 
-/// The transaction list body: date-grouped **sticky** sections built with
-/// slivers only (a `CustomScrollView` of `SliverMainAxisGroup`s, each a pinned
-/// `SliverPersistentHeader` + a `SliverList`; PROJECT_PLAN §B.4 — no new
-/// package). Rows come from [visibleTransactionsProvider] (the filtered/
-/// paginated DB stream with the Undo overlay on top). Nearing the end grows the
+/// The transaction list body.
+/// Rows come from [visibleTransactionsProvider] (the filtered/paginated DB
+/// stream with the Undo overlay on top). Nearing the end grows the
 /// pagination window ([TransactionListWindow.loadMore]) so the query stays
 /// bounded while remaining reactive.
 class TransactionListView extends ConsumerStatefulWidget {
@@ -220,66 +217,63 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
             message: l10n.transactionsEmptyMessage,
           );
         }
-        final List<TransactionDateGroup> groups = groupTransactionsByDate(rows);
-
         return CustomScrollView(
           controller: _controller,
           slivers: <Widget>[
-            for (final TransactionDateGroup group in groups)
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                ),
-                sliver: SliverList.separated(
-                  itemCount: group.rows.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (BuildContext context, int index) {
-                    final TransactionListRow row = group.rows[index];
-                    final Widget tile = InkWell(
-                      borderRadius: AppRadius.mdAll,
-                      onLongPress: () => _edit(row),
-                      child: TransactionListItem(
-                        row: row,
-                        currency: currencyService,
-                      ),
-                    );
-                    // Only pending income/expense are swipe-settleable
-                    // ("Öde"/"Tahsil et"); everything else renders plainly.
-                    final bool settleable =
-                        row.isPending &&
-                        (row.type == TransactionType.income ||
-                            row.type == TransactionType.expense);
-                    if (!settleable) {
-                      return KeyedSubtree(
-                        key: ValueKey<int>(row.id),
-                        child: tile,
-                      );
-                    }
-                    return Dismissible(
-                      key: ValueKey<String>('settle_${row.id}'),
-                      background: _SettleSwipeBackground(
-                        row: row,
-                        alignEnd: false,
-                      ),
-                      secondaryBackground: _SettleSwipeBackground(
-                        row: row,
-                        alignEnd: true,
-                      ),
-                      confirmDismiss: (DismissDirection _) async {
-                        await showSettleSheet(context, ref, row);
-                        // Never actually dismiss — the list updates
-                        // reactively from the DB after settling.
-                        return false;
-                      },
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.xs,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              ),
+              sliver: SliverList.separated(
+                itemCount: rows.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: AppSpacing.xs),
+                itemBuilder: (BuildContext context, int index) {
+                  final TransactionListRow row = rows[index];
+                  final Widget tile = InkWell(
+                    borderRadius: AppRadius.mdAll,
+                    onLongPress: () => _edit(row),
+                    child: TransactionListItem(
+                      row: row,
+                      currency: currencyService,
+                    ),
+                  );
+                  // Only pending income/expense are swipe-settleable
+                  // ("Öde"/"Tahsil et"); everything else renders plainly.
+                  final bool settleable =
+                      row.isPending &&
+                      (row.type == TransactionType.income ||
+                          row.type == TransactionType.expense);
+                  if (!settleable) {
+                    return KeyedSubtree(
+                      key: ValueKey<int>(row.id),
                       child: tile,
                     );
-                  },
-                ),
+                  }
+                  return Dismissible(
+                    key: ValueKey<String>('settle_${row.id}'),
+                    background: _SettleSwipeBackground(
+                      row: row,
+                      alignEnd: false,
+                    ),
+                    secondaryBackground: _SettleSwipeBackground(
+                      row: row,
+                      alignEnd: true,
+                    ),
+                    confirmDismiss: (DismissDirection _) async {
+                      await showSettleSheet(context, ref, row);
+                      // Never actually dismiss — the list updates
+                      // reactively from the DB after settling.
+                      return false;
+                    },
+                    child: tile,
+                  );
+                },
               ),
+            ),
             const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.lg)),
           ],
         );

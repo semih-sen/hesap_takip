@@ -63,6 +63,7 @@ class TransactionListRow {
     this.isDue = false,
     this.isOverdue = false,
     this.counterWalletName,
+    this.isTransferGenerated = false,
     this.isRecurring = false,
     required this.baseAmountMinor,
     required this.baseCurrencyCode,
@@ -109,6 +110,7 @@ class TransactionListRow {
   /// A [isPending] item whose due date is already in the past.
   final bool isOverdue;
   final String? counterWalletName;
+  final bool isTransferGenerated;
   final bool isRecurring;
 
   /// The transaction amount converted to the app's base currency.
@@ -166,6 +168,7 @@ TransactionListRow _toRow(
     isDue: isDue,
     isOverdue: isOverdue,
     counterWalletName: d.counterWalletName,
+    isTransferGenerated: d.isTransferGenerated,
     isRecurring: d.isRecurring,
     baseAmountMinor: d.baseAmountMinor,
     baseCurrencyCode: baseCurrencyCode,

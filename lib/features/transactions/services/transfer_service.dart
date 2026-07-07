@@ -14,7 +14,12 @@ part 'transfer_service.g.dart';
 
 /// Why a transfer was rejected before any DB write (Flag B-4). The UI maps each
 /// reason to a localized Turkish message.
-enum TransferValidationReason { sameWallet, nonPositiveAmount, missingWallet, archivedWallet }
+enum TransferValidationReason {
+  sameWallet,
+  nonPositiveAmount,
+  missingWallet,
+  archivedWallet,
+}
 
 /// Typed failure thrown by [TransferService] for an invalid request. Thrown
 /// BEFORE opening a `db.transaction`, so nothing is ever partially written.
@@ -172,27 +177,23 @@ class TransferService {
     required DateTime valueDate,
     required String? note,
   }) async {
+    final Account? fromAccount =
+        await _db.accountDao.getAccountById(wallets.from.accountId);
+    final Account? toAccount =
+        await _db.accountDao.getAccountById(wallets.to.accountId);
     final bool isCrossAccount = wallets.from.accountId != wallets.to.accountId;
-
-    // Build the transfer detail text to auto-append to the note.
-    String transferDetail;
-    if (isCrossAccount) {
-      final Account? fromAccount =
-          await _db.accountDao.getAccountById(wallets.from.accountId);
-      final Account? toAccount =
-          await _db.accountDao.getAccountById(wallets.to.accountId);
-      final String fromLabel =
-          '${fromAccount?.name ?? '?'}/${wallets.from.name}';
-      final String toLabel =
-          '${toAccount?.name ?? '?'}/${wallets.to.name}';
-      transferDetail = 'Transfer: $fromLabel -> $toLabel';
-    } else {
-      transferDetail =
-          'Transfer: ${wallets.from.name} -> ${wallets.to.name}';
-    }
-    final String effectiveNote = note == null || note.isEmpty
+    final String fromLabel =
+        '${fromAccount?.name ?? '?'}/${wallets.from.name}';
+    final String toLabel = '${toAccount?.name ?? '?'}/${wallets.to.name}';
+    final String transferDetail = <String>[
+      'Transfer sonucu oluşturuldu',
+      'Gönderen: $fromLabel',
+      'Alan: $toLabel',
+    ].join('\n');
+    final String? userNote = _stripTransferDetail(note);
+    final String effectiveNote = userNote == null || userNote.isEmpty
         ? transferDetail
-        : '$note\n$transferDetail';
+        : '$userNote\n$transferDetail';
 
     // OUT leg — source wallet, its own currency → base snapshot.
     final double outRate = await _rateToBase(
@@ -203,7 +204,9 @@ class TransferService {
     await _db.transactionDao.createTransaction(
       _leg(
         walletId: wallets.from.id,
-        type: isCrossAccount ? TransactionType.expense : TransactionType.transfer,
+        type: isCrossAccount
+            ? TransactionType.expense
+            : TransactionType.transfer,
         flow: FlowDirection.outflow,
         amountMinor: fromAmountMinor,
         currencyCode: wallets.from.currencyCode,
@@ -228,7 +231,9 @@ class TransferService {
     await _db.transactionDao.createTransaction(
       _leg(
         walletId: wallets.to.id,
-        type: isCrossAccount ? TransactionType.income : TransactionType.transfer,
+        type: isCrossAccount
+            ? TransactionType.income
+            : TransactionType.transfer,
         flow: FlowDirection.inflow,
         amountMinor: toAmountMinor,
         currencyCode: wallets.to.currencyCode,
@@ -326,6 +331,30 @@ class TransferService {
       );
     }
     return _TransferWallets(from: from, to: to);
+  }
+
+  static String? _stripTransferDetail(String? note) {
+    final String? trimmed = note?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+    final int marker = trimmed.indexOf('\nTransfer sonucu oluşturuldu');
+    if (marker >= 0) {
+      final String userNote = trimmed.substring(0, marker).trim();
+      return userNote.isEmpty ? null : userNote;
+    }
+    if (trimmed.startsWith('Transfer sonucu oluşturuldu')) {
+      return null;
+    }
+    final int legacyMarker = trimmed.indexOf('\nTransfer:');
+    if (legacyMarker >= 0) {
+      final String userNote = trimmed.substring(0, legacyMarker).trim();
+      return userNote.isEmpty ? null : userNote;
+    }
+    if (trimmed.startsWith('Transfer:')) {
+      return null;
+    }
+    return trimmed;
   }
 }
 

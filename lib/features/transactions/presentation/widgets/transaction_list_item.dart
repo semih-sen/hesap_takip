@@ -59,7 +59,7 @@ class TransactionListItem extends StatelessWidget {
     return RepaintBoundary(
       child: Container(
         clipBehavior: Clip.antiAlias,
-        constraints: const BoxConstraints(minHeight: 88),
+        constraints: const BoxConstraints(minHeight: 76),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: AppRadius.mdAll,
@@ -74,7 +74,7 @@ class TransactionListItem extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,7 +92,7 @@ class TransactionListItem extends StatelessWidget {
                       const SizedBox(height: 2),
                       // ── Row 2: Date + status badges … Wallet name ──
                       _buildRow2(theme, semantic, l10n, dateText),
-                      const SizedBox(height: AppSpacing.xs),
+                      const SizedBox(height: 2),
                       // ── Row 3: [recurring] + categories … foreign amount ──
                       _buildRow3(theme, semantic),
                     ],
@@ -177,27 +177,50 @@ class TransactionListItem extends StatelessWidget {
           ),
         );
       }
-    } else {
+    } else if (row.status == TransactionStatus.pending ||
+        row.status == TransactionStatus.scheduled) {
       if (row.type == TransactionType.expense) {
         badges.add(
           _StatusBadge(
-            label: row.isDue || row.isOverdue
-                ? 'Günü gelen Borç'
-                : l10n.pendingChipDebt,
+            label: l10n.pendingChipDebt,
             color: Colors.amber,
             theme: theme,
           ),
         );
+        if (row.isDue) {
+          badges.add(
+            _StatusBadge(
+              label: "Günü Geldi",
+              color: Colors.lightBlue,
+              theme: theme,
+            ),
+          );
+        } else if (row.isOverdue) {
+          badges.add(
+            _StatusBadge(label: "Günü Geçti", color: Colors.red, theme: theme),
+          );
+        }
       } else if (row.type == TransactionType.income) {
         badges.add(
           _StatusBadge(
-            label: row.isDue || row.isOverdue
-                ? 'Günü gelecek alacak'
-                : l10n.pendingChipReceivable,
+            label: l10n.pendingChipReceivable,
             color: Colors.amber,
             theme: theme,
           ),
         );
+        if (row.isDue) {
+          badges.add(
+            _StatusBadge(
+              label: "Günü Geldi",
+              color: Colors.lightBlue,
+              theme: theme,
+            ),
+          );
+        } else if (row.isOverdue) {
+          badges.add(
+            _StatusBadge(label: "Günü Geçti", color: Colors.red, theme: theme),
+          );
+        }
       }
     }
 
@@ -246,8 +269,9 @@ class TransactionListItem extends StatelessWidget {
       }
     }
 
-    // Transfer counter-wallet chip (if applicable).
-    if (row.type == TransactionType.transfer && row.counterWalletName != null) {
+    // Transfer counter-wallet chip (if applicable). Cross-account transfer
+    // legs are stored as income/expense, so use the transfer-group flag.
+    if (row.isTransferGenerated && row.counterWalletName != null) {
       final String fromWallet = row.flowDirection == FlowDirection.outflow
           ? row.walletName
           : row.counterWalletName!;
@@ -320,7 +344,7 @@ class TransactionListItem extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 22,
+      height: 20,
       child: Row(
         children: <Widget>[
           Expanded(

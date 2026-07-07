@@ -281,9 +281,10 @@ void main() {
           await db.transactionDao.getTransferLegs(groupId);
       // Both legs should have the same note with transfer detail.
       for (final Transaction leg in legs) {
-        expect(leg.note, contains('Transfer:'));
+        expect(leg.note, contains('Transfer sonucu oluşturuldu'));
         expect(leg.note, contains('Cüzdan-TRY'));
-        expect(leg.note, contains('->'));
+        expect(leg.note, contains('Gönderen: Hesap/'));
+        expect(leg.note, contains('Alan: Hesap/'));
       }
     });
 
@@ -336,7 +337,9 @@ void main() {
       final List<Transaction> legs =
           await db.transactionDao.getTransferLegs(groupId);
       for (final Transaction leg in legs) {
-        expect(leg.note, contains('Transfer: Banka1/TL Hesap -> Banka2/Dolar Hesap'));
+        expect(leg.note, contains('Transfer sonucu oluşturuldu'));
+        expect(leg.note, contains('Gönderen: Banka1/TL Hesap'));
+        expect(leg.note, contains('Alan: Banka2/Dolar Hesap'));
       }
     });
 
@@ -360,8 +363,7 @@ void main() {
       for (final Transaction leg in legs) {
         // Note should be exactly the transfer detail, no leading newline.
         expect(leg.note, isNotNull);
-        expect(leg.note, startsWith('Transfer:'));
-        expect(leg.note!.contains('\n'), isFalse);
+        expect(leg.note, startsWith('Transfer sonucu oluşturuldu'));
       }
     });
 
@@ -386,7 +388,7 @@ void main() {
       for (final Transaction leg in legs) {
         expect(leg.note, startsWith('Kira ödemesi'));
         expect(leg.note, contains('\n'));
-        expect(leg.note, contains('Transfer:'));
+        expect(leg.note, contains('Transfer sonucu oluşturuldu'));
       }
     });
   });

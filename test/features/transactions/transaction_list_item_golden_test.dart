@@ -29,6 +29,7 @@ void main() {
     bool isPending = false,
     bool isOverdue = false,
     String? counterWalletName,
+    bool isTransferGenerated = false,
     bool isRecurring = false,
     int accountColorValue = 0xFF5B8DEF,
   }) {
@@ -51,6 +52,7 @@ void main() {
       isPending: isPending,
       isOverdue: isOverdue,
       counterWalletName: counterWalletName,
+      isTransferGenerated: isTransferGenerated,
       isRecurring: isRecurring,
       baseAmountMinor: amountMinor,
       baseCurrencyCode: 'TRY',
@@ -274,6 +276,7 @@ void main() {
         type: TransactionType.transfer,
         flow: FlowDirection.outflow,
         counterWalletName: 'Birikim',
+        isTransferGenerated: true,
       ),
     );
     await expectLater(

@@ -24,6 +24,7 @@ void main() {
     bool isPending = false,
     bool isOverdue = false,
     String? counterWalletName,
+    bool isTransferGenerated = false,
     bool isRecurring = false,
     int accentColorValue = 0xFFFF6B6B,
     int accountColorValue = 0xFF5B8DEF,
@@ -46,6 +47,7 @@ void main() {
       isPending: isPending,
       isOverdue: isOverdue,
       counterWalletName: counterWalletName,
+      isTransferGenerated: isTransferGenerated,
       isRecurring: isRecurring,
       baseAmountMinor: 125000,
       baseCurrencyCode: 'TRY',
@@ -175,6 +177,7 @@ void main() {
           isPending: rows[i].isPending,
           isOverdue: rows[i].isOverdue,
           counterWalletName: rows[i].counterWalletName,
+          isTransferGenerated: rows[i].isTransferGenerated,
           isRecurring: rows[i].isRecurring,
           baseAmountMinor: rows[i].baseAmountMinor,
           baseCurrencyCode: rows[i].baseCurrencyCode,
@@ -230,4 +233,21 @@ void main() {
       expect(pendingHeight, plainHeight);
     },
   );
+
+  testWidgets('cross-account transfer legs show the swap icon in Row 3', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(<TransactionListRow>[
+        row(
+          type: TransactionType.expense,
+          counterWalletName: 'Dolar Hesap',
+          isTransferGenerated: true,
+        ),
+      ]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.swap_horiz), findsOneWidget);
+  });
 }
