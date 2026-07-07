@@ -35,8 +35,12 @@ class TransactionListItem extends StatelessWidget {
     final AppSemanticColors semantic =
         theme.extension<AppSemanticColors>() ?? AppSemanticColors.dark;
 
-    final Color accent = Color(row.accentColorValue);
     final Color accountAccent = Color(row.accountColorValue);
+    final Color backgroundColor = switch (row.type) {
+      TransactionType.income => Colors.green.withValues(alpha: 0.10),
+      TransactionType.expense => Colors.red.withValues(alpha: 0.10),
+      TransactionType.transfer => semantic.transfer.withValues(alpha: 0.10),
+    };
     final Color amountColor = switch (row.type) {
       TransactionType.income => semantic.income,
       TransactionType.expense => semantic.expense,
@@ -55,8 +59,9 @@ class TransactionListItem extends StatelessWidget {
     return RepaintBoundary(
       child: Container(
         clipBehavior: Clip.antiAlias,
+        constraints: const BoxConstraints(minHeight: 88),
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.10),
+          color: backgroundColor,
           borderRadius: AppRadius.mdAll,
         ),
         child: IntrinsicHeight(
@@ -89,7 +94,7 @@ class TransactionListItem extends StatelessWidget {
                       _buildRow2(theme, semantic, l10n, dateText),
                       const SizedBox(height: AppSpacing.xs),
                       // ── Row 3: [recurring] + categories … foreign amount ──
-                      _buildRow3(theme, semantic, l10n, amountColor),
+                      _buildRow3(theme, semantic),
                     ],
                   ),
                 ),
@@ -129,7 +134,7 @@ class TransactionListItem extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         if (showPendingBadge) ...<Widget>[
-          _PendingIcon(row: row, theme: theme, semantic: semantic, l10n: l10n),
+          _PendingIcon(row: row, l10n: l10n),
           const SizedBox(width: AppSpacing.sm),
         ],
         Text(
@@ -176,7 +181,9 @@ class TransactionListItem extends StatelessWidget {
       if (row.type == TransactionType.expense) {
         badges.add(
           _StatusBadge(
-            label: l10n.pendingChipDebt,
+            label: row.isDue || row.isOverdue
+                ? 'Günü gelen Borç'
+                : l10n.pendingChipDebt,
             color: Colors.amber,
             theme: theme,
           ),
@@ -184,7 +191,9 @@ class TransactionListItem extends StatelessWidget {
       } else if (row.type == TransactionType.income) {
         badges.add(
           _StatusBadge(
-            label: l10n.pendingChipReceivable,
+            label: row.isDue || row.isOverdue
+                ? 'Günü gelecek alacak'
+                : l10n.pendingChipReceivable,
             color: Colors.amber,
             theme: theme,
           ),
@@ -205,14 +214,16 @@ class TransactionListItem extends StatelessWidget {
         Expanded(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                row.walletName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.end,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: semantic.textMuted,
+            children: <Widget>[
+              Flexible(
+                child: Text(
+                  row.walletName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: semantic.textMuted,
+                  ),
                 ),
               ),
             ],
@@ -224,12 +235,7 @@ class TransactionListItem extends StatelessWidget {
 
   // ────────────────────────────── Row 3 ──────────────────────────────
 
-  Widget _buildRow3(
-    ThemeData theme,
-    AppSemanticColors semantic,
-    AppLocalizations l10n,
-    Color amountColor,
-  ) {
+  Widget _buildRow3(ThemeData theme, AppSemanticColors semantic) {
     // Left side: [loop icon] + category chips.
     final List<Widget> left = <Widget>[];
 
@@ -242,11 +248,17 @@ class TransactionListItem extends StatelessWidget {
 
     // Transfer counter-wallet chip (if applicable).
     if (row.type == TransactionType.transfer && row.counterWalletName != null) {
+      final String fromWallet = row.flowDirection == FlowDirection.outflow
+          ? row.walletName
+          : row.counterWalletName!;
+      final String toWallet = row.flowDirection == FlowDirection.outflow
+          ? row.counterWalletName!
+          : row.walletName;
       left.add(
         Flexible(
           child: _MetaChip(
             icon: Icons.swap_horiz,
-            label: l10n.transactionTransferTo(row.counterWalletName!),
+            label: '$fromWallet -> $toWallet',
             color: semantic.transfer,
             theme: theme,
           ),
@@ -379,33 +391,29 @@ class _CategoryChip extends StatelessWidget {
 /// A compact Row-1 pill marking a pending borç/alacak item. An overdue item
 /// prepends a warning icon and is wrapped in a `Semantics`/`Tooltip` label.
 class _PendingIcon extends StatelessWidget {
-  const _PendingIcon({
-    required this.row,
-    required this.theme,
-    required this.semantic,
-    required this.l10n,
-  });
+  const _PendingIcon({required this.row, required this.l10n});
 
   final TransactionListRow row;
-  final ThemeData theme;
-  final AppSemanticColors semantic;
   final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final bool isIncome = row.type == TransactionType.income;
-    //final Color accent = isIncome ? semantic.income : semantic.expense;
-    final Widget pill = Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
-    );
     if (!row.isOverdue) {
-      return pill;
+      return Container(
+        width: 8,
+        height: 8,
+        decoration: const BoxDecoration(
+          color: Colors.amber,
+          shape: BoxShape.circle,
+        ),
+      );
     }
     return Tooltip(
       message: l10n.pendingOverdue,
-      child: Semantics(label: l10n.pendingOverdue, child: pill),
+      child: Semantics(
+        label: l10n.pendingOverdue,
+        child: const Icon(Icons.error_outline, size: 14, color: Colors.amber),
+      ),
     );
   }
 }

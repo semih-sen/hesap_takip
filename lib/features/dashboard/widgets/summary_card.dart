@@ -128,6 +128,7 @@ class SummaryCardBody extends StatelessWidget {
         ),
         // Row 2 — period flows.
         Row(
+          //mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Expanded(
               child: _FlowCell(

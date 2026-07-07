@@ -6,11 +6,15 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/currency/amount_parsing.dart';
 import '../../../core/currency/currency_service.dart';
 import '../../../core/date/app_date.dart';
+import '../../../core/undo/entity_actions.dart';
+import '../../../core/undo/undo_service.dart';
 import '../../../data/models/account.dart';
 import '../../../data/models/transaction.dart';
 import '../../../data/models/wallet.dart';
+import '../../../data/repositories/transaction_repository.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../accounts/application/accounts_providers.dart';
+import '../../shared/undo_snackbar.dart';
 import '../../wallets/application/wallets_providers.dart';
 import '../services/balance_service.dart';
 import '../services/transfer_service.dart';
@@ -69,8 +73,8 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
 
   Future<void> _loadForEdit() async {
     final TransferService service = ref.read(transferServiceProvider);
-    final ({Transaction from, Transaction to})? legs =
-        await service.loadTransfer(widget.transferGroupId!);
+    final ({Transaction from, Transaction to})? legs = await service
+        .loadTransfer(widget.transferGroupId!);
     if (legs == null) {
       if (mounted) {
         Navigator.of(context).pop();
@@ -168,15 +172,15 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
     }
   }
 
-  String _errorFor(AppLocalizations l10n, TransferValidationReason reason) =>
-      switch (reason) {
-        TransferValidationReason.sameWallet => l10n.transferErrorSameWallet,
-        TransferValidationReason.nonPositiveAmount =>
-          l10n.transferErrorNonPositive,
-        TransferValidationReason.archivedWallet => l10n.transferErrorArchived,
-        TransferValidationReason.missingWallet =>
-          l10n.transferErrorMissingWallet,
-      };
+  String _errorFor(
+    AppLocalizations l10n,
+    TransferValidationReason reason,
+  ) => switch (reason) {
+    TransferValidationReason.sameWallet => l10n.transferErrorSameWallet,
+    TransferValidationReason.nonPositiveAmount => l10n.transferErrorNonPositive,
+    TransferValidationReason.archivedWallet => l10n.transferErrorArchived,
+    TransferValidationReason.missingWallet => l10n.transferErrorMissingWallet,
+  };
 
   Future<void> _save(List<Wallet> wallets) async {
     final FormState? form = _formKey.currentState;
@@ -248,6 +252,59 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
     if (!mounted) {
       return;
     }
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _confirmDelete() async {
+    final String? groupId = widget.transferGroupId;
+    if (groupId == null) {
+      return;
+    }
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: Text(l10n.actionDelete),
+            content: const Text('Bu işlemi silmek istediğinize emin misiniz?'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l10n.actionCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l10n.actionDelete),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    final TransactionRepository repo = ref.read(transactionRepositoryProvider);
+    final List<Transaction> legs = await repo.transferLegs(groupId);
+    if (legs.length != 2 || !mounted) {
+      return;
+    }
+    final String label = l10n.transferDeleted;
+    final String? pendingId = await ref
+        .read(undoServiceProvider)
+        .enqueue(
+          DeleteTransferAction(
+            transferGroupId: groupId,
+            legTransactionIds: <int>[
+              for (final Transaction leg in legs) leg.id,
+            ],
+            label: label,
+          ),
+        );
+    if (pendingId == null || !mounted) {
+      return;
+    }
+    showUndoSnackBar(context, ref, pendingId: pendingId, message: label);
     Navigator.of(context).pop();
   }
 
@@ -422,6 +479,14 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
             onPressed: _saving ? null : () => _save(wallets),
             child: Text(l10n.actionSave),
           ),
+          if (_isEdit) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _confirmDelete,
+              icon: const Icon(Icons.delete_outline),
+              label: Text(l10n.actionDelete),
+            ),
+          ],
         ],
       ),
     );
@@ -436,8 +501,7 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
     final CurrencyService currency = ref.watch(currencyServiceProvider);
     final AsyncValue<int> balance = ref.watch(walletBalanceProvider(w.id));
     final String label = balance.maybeWhen(
-      data: (int minor) =>
-          '$head · ${currency.format(minor, w.currencyCode)}',
+      data: (int minor) => '$head · ${currency.format(minor, w.currencyCode)}',
       orElse: () => head,
     );
     return Text(label, maxLines: 1, overflow: TextOverflow.ellipsis);

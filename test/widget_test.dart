@@ -54,7 +54,7 @@ void main() {
     expect(find.text('Ayarlar'), findsOneWidget);
 
     // Dashboard is the initial destination — the real transaction-list host
-    // (Phase 5), identified by its add-transaction FAB.
+    // (Phase 5), identified by its add-transaction app-bar action.
     expect(find.byTooltip('İşlem ekle'), findsOneWidget);
 
     // Navigation switches between screens. The real Settings screen (Phase 11)

@@ -35,7 +35,9 @@ void main() {
       currencyCode: 'TRY',
       flowDirection: flow,
       type: type,
-      status: isPending ? TransactionStatus.pending : TransactionStatus.completed,
+      status: isPending
+          ? TransactionStatus.pending
+          : TransactionStatus.completed,
       walletName: 'Vadesiz',
       valueDate: fixedDate,
       accentColorValue: accentColorValue,
@@ -51,7 +53,18 @@ void main() {
   }
 
   Widget wrap(List<TransactionListRow> rows, {double width = 380}) {
-    final currency = CurrencyService(kDefaultCurrencies.map((c) => Currency(code: c.code, symbol: c.symbol, minorDigits: c.minorDigits, symbolOnLeft: c.symbolOnLeft)).toList());
+    final currency = CurrencyService(
+      kDefaultCurrencies
+          .map(
+            (c) => Currency(
+              code: c.code,
+              symbol: c.symbol,
+              minorDigits: c.minorDigits,
+              symbolOnLeft: c.symbolOnLeft,
+            ),
+          )
+          .toList(),
+    );
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
@@ -71,7 +84,11 @@ void main() {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 for (final TransactionListRow r in rows)
-                  TransactionListItem(key: ValueKey<int>(r.id), row: r, currency: currency),
+                  TransactionListItem(
+                    key: ValueKey<int>(r.id),
+                    row: r,
+                    currency: currency,
+                  ),
               ],
             ),
           ),
@@ -167,8 +184,9 @@ void main() {
     await tester.pumpWidget(wrap(keyed));
     await tester.pumpAndSettle();
 
-    final double baseline =
-        tester.getSize(find.byType(TransactionListItem).at(0)).height;
+    final double baseline = tester
+        .getSize(find.byType(TransactionListItem).at(0))
+        .height;
     for (int i = 1; i < keyed.length; i++) {
       expect(
         tester.getSize(find.byType(TransactionListItem).at(i)).height,
@@ -192,8 +210,8 @@ void main() {
       await tester.pumpWidget(wrap(<TransactionListRow>[pending]));
       await tester.pumpAndSettle();
 
-      // Badge (Borç) + its overdue icon are present; category chip shows in Row 3.
-      expect(find.text('Borç'), findsOneWidget);
+      // Due debt badge + its overdue icon are present; category chip shows in Row 3.
+      expect(find.text('Günü gelen Borç'), findsOneWidget);
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Kira'), findsOneWidget);
       // The old "Vade: …" due-date line is gone (Row 2 already shows the date).
@@ -201,14 +219,15 @@ void main() {
       expect(find.textContaining('Vade:'), findsNothing);
 
       // Same fixed height as a plain completed row.
-      final double pendingHeight =
-          tester.getSize(find.byType(TransactionListItem)).height;
+      final double pendingHeight = tester
+          .getSize(find.byType(TransactionListItem))
+          .height;
       await tester.pumpWidget(wrap(<TransactionListRow>[row()]));
       await tester.pumpAndSettle();
-      final double plainHeight =
-          tester.getSize(find.byType(TransactionListItem)).height;
+      final double plainHeight = tester
+          .getSize(find.byType(TransactionListItem))
+          .height;
       expect(pendingHeight, plainHeight);
     },
   );
 }
-

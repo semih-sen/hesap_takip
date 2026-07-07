@@ -9,6 +9,8 @@ import '../../../core/currency/currency_service.dart';
 import '../../../core/currency/money.dart';
 import '../../../core/currency/split_allocation.dart';
 import '../../../core/date/app_date.dart';
+import '../../../core/undo/entity_actions.dart';
+import '../../../core/undo/undo_service.dart';
 import '../../../data/database/tables/enums.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/transaction.dart';
@@ -20,6 +22,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../accounts/application/accounts_providers.dart';
 import '../../categories/application/categories_providers.dart';
 import '../../shared/entity_labels.dart';
+import '../../shared/undo_snackbar.dart';
 import '../../wallets/application/wallets_providers.dart';
 import '../services/balance_service.dart';
 import 'transaction_form_theme.dart';
@@ -244,12 +247,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final DateTime now = DateTime.now();
 
     final TransactionRepository repo = ref.read(transactionRepositoryProvider);
-    // Status is DERIVED from the value date (§2): a future date is a pending
-    // borç/alacak, today/past is completed. A partially-paid parent (already has
-    // settlement children) stays pending regardless of an edited date (E-3);
-    // only a settlement completes it.
+    // Status is derived only for new rows or rows that are already completed.
+    // An existing pending borc/alacak stays pending even after its due date;
+    // only the explicit settle flow completes it.
     final bool keepPending =
-        _isEdit && await repo.hasSettlementChildren(_editing!.id);
+        _isEdit &&
+        (_editing!.status == TransactionStatus.pending ||
+            await repo.hasSettlementChildren(_editing!.id));
     if (!mounted) {
       return;
     }
@@ -306,6 +310,47 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (!mounted) {
       return;
     }
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _confirmDelete() async {
+    final Transaction? txn = _editing;
+    if (txn == null) {
+      return;
+    }
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => AlertDialog(
+            title: Text(l10n.actionDelete),
+            content: const Text(
+              'Bu işlemi silmek istediğinizden emin misiniz?',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l10n.actionCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l10n.actionDelete),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) {
+      return;
+    }
+    final String label = l10n.transactionDeleted;
+    final String? pendingId = await ref
+        .read(undoServiceProvider)
+        .enqueue(DeleteTransactionAction(transaction: txn, label: label));
+    if (pendingId == null || !mounted) {
+      return;
+    }
+    showUndoSnackBar(context, ref, pendingId: pendingId, message: label);
     Navigator.of(context).pop();
   }
 
@@ -449,14 +494,19 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
                     value: w.id,
                     child: Consumer(
                       builder: (context, ref, child) {
-                        final AsyncValue<int> balanceAsync = ref.watch(walletBalanceProvider(w.id));
+                        final AsyncValue<int> balanceAsync = ref.watch(
+                          walletBalanceProvider(w.id),
+                        );
                         final String balanceText = balanceAsync.when(
                           data: (int balance) {
-                            final String formatted = _currency.format(balance, w.currencyCode);
+                            final String formatted = _currency.format(
+                              balance,
+                              w.currencyCode,
+                            );
                             return ' (Bakiye: $formatted)'; // Hardcoded Turkish fallback for balance
                           },
                           loading: () => ' (...)',
-                          error: (_, __) => ' (!)',
+                          error: (_, _) => ' (!)',
                         );
                         return Text(
                           '${accountNames[w.accountId] ?? ''} / ${w.name}$balanceText',
@@ -593,6 +643,14 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
             icon: const Icon(Icons.check),
             label: Text(l10n.actionSave),
           ),
+          if (_isEdit) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _confirmDelete,
+              icon: const Icon(Icons.delete_outline),
+              label: Text(l10n.actionDelete),
+            ),
+          ],
         ],
       ),
     );

@@ -60,6 +60,7 @@ class TransactionListRow {
     this.payee,
     this.categories = const <CategoryChipData>[],
     this.isPending = false,
+    this.isDue = false,
     this.isOverdue = false,
     this.counterWalletName,
     this.isRecurring = false,
@@ -102,6 +103,9 @@ class TransactionListRow {
   /// `amountMinor` is the outstanding remainder; swipe settles it.
   final bool isPending;
 
+  /// A [isPending] item whose due date has arrived or passed.
+  final bool isDue;
+
   /// A [isPending] item whose due date is already in the past.
   final bool isOverdue;
   final String? counterWalletName;
@@ -137,7 +141,9 @@ TransactionListRow _toRow(
   // Pending/overdue are DERIVED here (where "today" is known) and passed as
   // flags so the pure list item never reads a clock or a provider (§5.1).
   final bool isPending = d.status == TransactionStatus.pending;
-  final bool isOverdue = isPending && d.valueDate.isBefore(AppDate.today());
+  final DateTime today = AppDate.today();
+  final bool isDue = isPending && !d.valueDate.isAfter(today);
+  final bool isOverdue = isPending && d.valueDate.isBefore(today);
   return TransactionListRow(
     id: d.id,
     title: d.note,
@@ -157,6 +163,7 @@ TransactionListRow _toRow(
         CategoryChipData(id: c.id, name: c.name, colorValue: c.colorValue),
     ],
     isPending: isPending,
+    isDue: isDue,
     isOverdue: isOverdue,
     counterWalletName: d.counterWalletName,
     isRecurring: d.isRecurring,

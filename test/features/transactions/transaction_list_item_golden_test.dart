@@ -5,7 +5,6 @@ import 'package:hesap_takip/app/theme/app_theme.dart';
 
 import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
-import 'package:hesap_takip/core/date/app_date.dart';
 import 'package:hesap_takip/data/database/tables/enums.dart';
 import 'package:hesap_takip/features/transactions/application/transactions_providers.dart';
 import 'package:hesap_takip/features/transactions/presentation/widgets/transaction_list_item.dart';
@@ -79,16 +78,38 @@ void main() {
               padding: const EdgeInsets.all(16),
               child: TransactionListItem(
                 row: r,
-                currency: CurrencyService(
-                  const [
-  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
-
-],
-                ),
+                currency: CurrencyService(const [
+                  Currency(
+                    code: 'TRY',
+                    symbol: '₺',
+                    minorDigits: 2,
+                    symbolOnLeft: false,
+                  ),
+                  Currency(
+                    code: 'USD',
+                    symbol: '\$',
+                    minorDigits: 2,
+                    symbolOnLeft: true,
+                  ),
+                  Currency(
+                    code: 'EUR',
+                    symbol: '€',
+                    minorDigits: 2,
+                    symbolOnLeft: false,
+                  ),
+                  Currency(
+                    code: 'GBP',
+                    symbol: '£',
+                    minorDigits: 2,
+                    symbolOnLeft: true,
+                  ),
+                  Currency(
+                    code: 'JPY',
+                    symbol: '¥',
+                    minorDigits: 0,
+                    symbolOnLeft: true,
+                  ),
+                ]),
               ),
             ),
           ),
@@ -176,7 +197,7 @@ void main() {
   });
 
   testWidgets(
-    'pending expense shows the Borç badge; overdue adds the warning icon + '
+    'pending expense shows the due debt badge; overdue adds the warning icon + '
     'Gecikmiş semantics (not visible text)',
     (WidgetTester tester) async {
       await pumpRow(
@@ -190,7 +211,7 @@ void main() {
           isOverdue: true,
         ),
       );
-      expect(find.text('Borç'), findsOneWidget);
+      expect(find.text('Günü gelen Borç'), findsOneWidget);
       expect(find.text('Alacak'), findsNothing);
       // "Gecikmiş" is now an icon + tooltip/semantics label, not on-screen text.
       expect(find.text('Gecikmiş'), findsNothing);
@@ -236,7 +257,7 @@ void main() {
         ),
       );
       // Row-1 pending badge...
-      expect(find.text('Borç'), findsOneWidget);
+      expect(find.text('Günü gelen Borç'), findsOneWidget);
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       // ...AND Row-3 category chips (the bug §D.2 fixes: chips now show for
       // pending rows).
