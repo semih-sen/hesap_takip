@@ -86,7 +86,7 @@ void main() {
       toWalletId: w2,
       fromAmountMinor: 5000,
       toAmountMinor: 5000,
-      rate: Decimal.one,
+      rate: 1.0,
       valueDate: date,
     );
 
@@ -112,7 +112,7 @@ void main() {
       amountMinor: 10000,
       fromCode: 'TRY',
       toCode: 'USD',
-      rate: rate,
+      rate: rate.toDouble(),
     );
     expect(toMinor, 300);
 
@@ -121,7 +121,7 @@ void main() {
       toWalletId: w3,
       fromAmountMinor: 10000,
       toAmountMinor: toMinor,
-      rate: rate,
+      rate: rate.toDouble(),
       valueDate: date,
     );
 
@@ -181,7 +181,7 @@ void main() {
       toWalletId: w2,
       fromAmountMinor: 5000,
       toAmountMinor: 5000,
-      rate: Decimal.one,
+      rate: 1.0,
       valueDate: date,
     );
 
@@ -207,7 +207,7 @@ void main() {
       toWalletId: w2,
       fromAmountMinor: 5000,
       toAmountMinor: 5000,
-      rate: Decimal.one,
+      rate: 1.0,
       valueDate: date,
     );
     final List<Transaction> legs =
@@ -273,7 +273,7 @@ void main() {
         toWalletId: w2,
         fromAmountMinor: 5000,
         toAmountMinor: 5000,
-        rate: Decimal.one,
+        rate: 1.0,
         valueDate: date,
       );
 
@@ -329,7 +329,7 @@ void main() {
         toWalletId: w2,
         fromAmountMinor: 10000,
         toAmountMinor: 300,
-        rate: Decimal.parse('0.03'),
+        rate: 0.03,
         valueDate: date,
       );
 
@@ -350,7 +350,7 @@ void main() {
         toWalletId: w2,
         fromAmountMinor: 1000,
         toAmountMinor: 1000,
-        rate: Decimal.one,
+        rate: 1.0,
         valueDate: date,
         note: null,
       );
@@ -376,7 +376,7 @@ void main() {
         toWalletId: w2,
         fromAmountMinor: 2000,
         toAmountMinor: 2000,
-        rate: Decimal.one,
+        rate: 1.0,
         valueDate: date,
         note: 'Kira ödemesi',
       );

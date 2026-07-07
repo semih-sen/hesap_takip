@@ -123,7 +123,7 @@ class SettlementService {
             amountMinor: paymentAmountMinor,
             fromCode: parent.currencyCode,
             toCode: base,
-            rate: parent.exchangeRateToBase,
+            rate: parent.exchangeRateToBase.toDouble(),
           );
 
     late final int childId;

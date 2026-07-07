@@ -88,5 +88,6 @@ void main() {
     // Seed data survived too.
     final AppSetting settings = await migrated.settingsDao.getSettings();
     expect(settings.baseCurrencyCode, 'TRY');
+    expect(settings.primaryCurrencyCode, 'TRY');
   });
 }

@@ -19,3 +19,26 @@ Decimal? parseTurkishAmount(String raw) {
       .replaceAll(',', '.');
   return Decimal.tryParse(normalized);
 }
+
+/// Parses exchange-rate values where either `,` or `.` may be the decimal
+/// separator. If both appear, the last separator is treated as decimal and the
+/// other as a thousands separator.
+Decimal? parseExchangeRateAmount(String raw) {
+  final String compact = raw.trim().replaceAll(' ', '');
+  if (compact.isEmpty) {
+    return Decimal.zero;
+  }
+
+  final int lastComma = compact.lastIndexOf(',');
+  final int lastDot = compact.lastIndexOf('.');
+  if (lastComma == -1 && lastDot == -1) {
+    return Decimal.tryParse(compact);
+  }
+
+  final String decimalSeparator = lastComma > lastDot ? ',' : '.';
+  final String groupingSeparator = decimalSeparator == ',' ? '.' : ',';
+  final String normalized = compact
+      .replaceAll(groupingSeparator, '')
+      .replaceAll(decimalSeparator, '.');
+  return Decimal.tryParse(normalized);
+}

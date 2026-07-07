@@ -1,4 +1,3 @@
-import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -169,7 +168,7 @@ class DriftTransactionRepository implements TransactionRepository {
         quoteCurrency: base,
         asOf: DateTime(9999, 12, 31),
       );
-      final Decimal rate = cached?.rate ?? Decimal.one;
+      final double rate = cached?.rate ?? 1.0;
       initialBaseMinor += _currency.convertMinor(
         amountMinor: w.initialBalanceMinor,
         fromCode: w.currencyCode,

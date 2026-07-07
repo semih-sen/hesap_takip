@@ -31,6 +31,8 @@ part 'app_database.g.dart';
 /// - v1: initial schema.
 /// - v2 (Phase 9): adds the nullable `Transactions.settledContribMinor` column
 ///   (a partial-payment child's contribution in its parent's currency).
+/// - v5: stores cached exchange rates as SQLite REAL/double instead of text.
+/// - v6: adds AppSettings.primaryCurrencyCode for list-row equivalents.
 @DriftDatabase(
   tables: [
     Accounts,
@@ -63,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -84,6 +86,15 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.addColumn(accounts, accounts.isDefault);
+      }
+      if (from < 5) {
+        await _migrateExchangeRatesToReal(m);
+      }
+      if (from < 6) {
+        await m.addColumn(appSettings, appSettings.primaryCurrencyCode);
+        await customStatement(
+          'UPDATE app_settings SET primary_currency_code = base_currency_code',
+        );
       }
     },
     beforeOpen: (OpeningDetails details) async {
@@ -111,6 +122,7 @@ class AppDatabase extends _$AppDatabase {
       AppSettingsCompanion.insert(
         id: const Value(1),
         baseCurrencyCode: const Value('TRY'),
+        primaryCurrencyCode: const Value('TRY'),
         firstDayOfWeek: const Value(1),
       ),
     );
@@ -147,5 +159,19 @@ class AppDatabase extends _$AppDatabase {
         );
       }
     });
+  }
+
+  Future<void> _migrateExchangeRatesToReal(Migrator m) async {
+    await customStatement(
+      'ALTER TABLE exchange_rates RENAME TO exchange_rates_old;',
+    );
+    await m.createTable(exchangeRates);
+    await customStatement(
+      'INSERT INTO exchange_rates '
+      '(id, base_currency, quote_currency, rate, as_of_date, source) '
+      'SELECT id, base_currency, quote_currency, CAST(rate AS REAL), '
+      'as_of_date, source FROM exchange_rates_old;',
+    );
+    await customStatement('DROP TABLE exchange_rates_old;');
   }
 }

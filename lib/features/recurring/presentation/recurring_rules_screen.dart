@@ -172,14 +172,14 @@ class _RuleRow extends ConsumerWidget {
           vertical: AppSpacing.xs,
         ),
         leading: Icon(
-          rule.isActive ? Icons.repeat : Icons.pause_circle_outline,
-          color: rule.isActive ? theme.colorScheme.primary : AppColors.textMuted,
+          rule.isActive ? Icons.loop : Icons.pause_circle_outline,
+          color: rule.isActive
+              ? theme.colorScheme.primary
+              : AppColors.textMuted,
         ),
         title: Row(
           children: <Widget>[
-            Flexible(
-              child: Text(rule.name, overflow: TextOverflow.ellipsis),
-            ),
+            Flexible(child: Text(rule.name, overflow: TextOverflow.ellipsis)),
             if (!rule.isActive) ...<Widget>[
               const SizedBox(width: AppSpacing.sm),
               Text(
@@ -246,7 +246,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.repeat, size: 56, color: AppColors.textMuted),
+            const Icon(Icons.loop, size: 56, color: AppColors.textMuted),
             const SizedBox(height: AppSpacing.md),
             Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.xs),

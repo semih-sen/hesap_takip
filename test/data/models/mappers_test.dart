@@ -189,8 +189,8 @@ void main() {
     expect(domain.toRow(), equals(row));
   });
 
-  test('ExchangeRateEntry: exact Decimal rate round-trip', () async {
-    final Decimal rate = Decimal.parse('34.123456');
+  test('ExchangeRateEntry: raw double rate round-trip', () async {
+    const double rate = 34.123456;
     final int id = await database.exchangeRateDao.insertRate(
       db.ExchangeRatesCompanion.insert(
         baseCurrency: 'USD',
@@ -205,7 +205,7 @@ void main() {
     )..where((t) => t.id.equals(id))).getSingle());
 
     final domain = row.toDomain();
-    expect(domain.rate, rate); // exact
+    expect(domain.rate, rate);
     expect(domain.source, 'manual');
     expect(domain.toRow(), equals(row));
   });

@@ -216,7 +216,7 @@ void main() {
         amountMinor: amountMinor,
         fromCode: 'TRY',
         toCode: 'TRY',
-        rate: Decimal.one,
+        rate: 1.0,
       );
       final int id = await repo.createTransactionWithCategories(
         transaction: expenseTxn(
@@ -237,12 +237,13 @@ void main() {
       final int accountId = await seedAccount();
       final int walletId = await seedWallet(accountId, code: 'USD');
       final Decimal rate = Decimal.parse('30');
+      final double rawRate = 30.0;
       final int amountMinor = 1000; // $10.00
       final int expectedBase = currency.convertMinor(
         amountMinor: amountMinor,
         fromCode: 'USD',
         toCode: 'TRY',
-        rate: rate,
+        rate: rawRate,
       );
 
       final int id = await repo.createTransactionWithCategories(

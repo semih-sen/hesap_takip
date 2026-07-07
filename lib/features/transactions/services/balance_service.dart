@@ -1,4 +1,3 @@
-import 'package:decimal/decimal.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/currency/currency_service.dart';
@@ -52,7 +51,7 @@ class BalanceService {
           amountMinor: entry.value,
           fromCode: entry.key,
           toCode: base,
-          rate: cached?.rate ?? Decimal.one,
+          rate: cached?.rate ?? 1.0,
         );
       }
       yield total;

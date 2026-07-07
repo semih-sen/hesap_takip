@@ -191,8 +191,8 @@ class BackupService {
 
 /// A [ValueSerializer] that (de)serializes `Decimal` as its canonical String,
 /// delegating everything else to the drift default. Needed because the default
-/// serializer cannot encode/decode the `Decimal` type-converter columns
-/// (`exchangeRateToBase`, `rate`).
+/// serializer cannot encode/decode the `exchangeRateToBase` Decimal
+/// type-converter column.
 class _DecimalAwareSerializer implements ValueSerializer {
   const _DecimalAwareSerializer();
 

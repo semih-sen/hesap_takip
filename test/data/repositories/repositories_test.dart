@@ -156,11 +156,11 @@ void main() {
         'TRY',
         onOrBefore: DateTime(2026, 3, 1),
       );
-      expect(atMarch!.rate, Decimal.parse('33.50'));
+      expect(atMarch!.rate, 33.50);
 
       // No bound → newest overall.
       final ExchangeRateEntry? latest = await repo.latestRate('USD', 'TRY');
-      expect(latest!.rate, Decimal.parse('34.10'));
+      expect(latest!.rate, 34.10);
 
       // Unknown pair → null.
       expect(await repo.latestRate('EUR', 'TRY'), isNull);
@@ -188,7 +188,7 @@ ExchangeRateEntry _rate(String rate, DateTime asOf) => ExchangeRateEntry(
   id: 0,
   baseCurrency: 'USD',
   quoteCurrency: 'TRY',
-  rate: Decimal.parse(rate),
+  rate: double.parse(rate),
   asOfDate: asOf,
 );
 

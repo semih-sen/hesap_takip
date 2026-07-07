@@ -142,7 +142,7 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
     final Wallet? from = _walletById(wallets, _fromWalletId);
     final Wallet? to = _walletById(wallets, _toWalletId);
     if (from != null && to != null && from.currencyCode != to.currencyCode) {
-      final Decimal suggested = await ref
+      final double suggested = await ref
           .read(transferServiceProvider)
           .suggestRate(from.currencyCode, to.currencyCode, _valueDate);
       if (!mounted) {
@@ -203,9 +203,9 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
             to.currencyCode,
           )
         : fromMinor;
-    final Decimal rate = cross
-        ? (parseTurkishAmount(_rateController.text) ?? Decimal.one)
-        : Decimal.one;
+    final double rate = cross
+        ? (parseTurkishAmount(_rateController.text) ?? Decimal.one).toDouble()
+        : 1.0;
 
     try {
       final TransferService service = ref.read(transferServiceProvider);

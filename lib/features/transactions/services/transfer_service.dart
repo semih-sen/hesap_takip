@@ -56,7 +56,7 @@ class TransferService {
     required int toWalletId,
     required int fromAmountMinor,
     required int toAmountMinor,
-    required Decimal rate,
+    required double rate,
     required DateTime valueDate,
     String? note,
   }) async {
@@ -92,7 +92,7 @@ class TransferService {
     required int toWalletId,
     required int fromAmountMinor,
     required int toAmountMinor,
-    required Decimal rate,
+    required double rate,
     required DateTime valueDate,
     String? note,
   }) async {
@@ -147,20 +147,20 @@ class TransferService {
 
   /// Suggested `from → to` rate for the form, from the cache (latest on or
   /// before [valueDate]); 1 for a same-currency pair, or when none is cached.
-  Future<Decimal> suggestRate(
+  Future<double> suggestRate(
     String fromCode,
     String toCode,
     DateTime valueDate,
   ) async {
     if (fromCode == toCode) {
-      return Decimal.one;
+      return 1.0;
     }
     final ExchangeRate? cached = await _db.exchangeRateDao.getLatestRate(
       baseCurrency: fromCode,
       quoteCurrency: toCode,
       asOf: valueDate,
     );
-    return cached?.rate ?? Decimal.one;
+    return cached?.rate ?? 1.0;
   }
 
   Future<void> _insertLegs({
@@ -195,7 +195,7 @@ class TransferService {
         : '$note\n$transferDetail';
 
     // OUT leg — source wallet, its own currency → base snapshot.
-    final Decimal outRate = await _rateToBase(
+    final double outRate = await _rateToBase(
       wallets.from.currencyCode,
       base,
       valueDate,
@@ -220,7 +220,7 @@ class TransferService {
       ),
     );
     // IN leg — destination wallet, its own currency → base snapshot.
-    final Decimal inRate = await _rateToBase(
+    final double inRate = await _rateToBase(
       wallets.to.currencyCode,
       base,
       valueDate,
@@ -252,7 +252,7 @@ class TransferService {
     required FlowDirection flow,
     required int amountMinor,
     required String currencyCode,
-    required Decimal rateToBase,
+    required double rateToBase,
     required int baseAmountMinor,
     required DateTime valueDate,
     required String? note,
@@ -265,7 +265,7 @@ class TransferService {
       status: TransactionStatus.completed,
       amountMinor: amountMinor,
       currencyCode: currencyCode,
-      exchangeRateToBase: rateToBase,
+      exchangeRateToBase: Decimal.parse(rateToBase.toString()),
       baseAmountMinor: baseAmountMinor,
       valueDate: valueDate,
       note: Value(note),
@@ -273,7 +273,7 @@ class TransferService {
     );
   }
 
-  int _toBase(int amountMinor, String from, String base, Decimal rate) {
+  int _toBase(int amountMinor, String from, String base, double rate) {
     if (from == base) {
       return amountMinor;
     }
@@ -285,16 +285,16 @@ class TransferService {
     );
   }
 
-  Future<Decimal> _rateToBase(String code, String base, DateTime onOrBefore) async {
+  Future<double> _rateToBase(String code, String base, DateTime onOrBefore) async {
     if (code == base) {
-      return Decimal.one;
+      return 1.0;
     }
     final ExchangeRate? cached = await _db.exchangeRateDao.getLatestRate(
       baseCurrency: code,
       quoteCurrency: base,
       asOf: onOrBefore,
     );
-    return cached?.rate ?? Decimal.one;
+    return cached?.rate ?? 1.0;
   }
 
   Future<_TransferWallets> _validate({

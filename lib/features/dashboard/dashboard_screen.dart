@@ -52,7 +52,7 @@ class DashboardScreen extends ConsumerWidget {
           IconButton(
             tooltip: l10n.recurringTitle,
             onPressed: () => _openRecurring(context),
-            icon: const Icon(Icons.repeat),
+            icon: const Icon(Icons.loop),
           ),
           IconButton(
             tooltip: l10n.filterTitle,

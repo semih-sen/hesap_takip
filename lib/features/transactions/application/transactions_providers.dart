@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/currency/currency_service.dart';
 import '../../../core/date/app_date.dart';
 import '../../../core/date/date_range.dart';
 import '../../../core/undo/optimistic_overlay.dart';
@@ -8,7 +9,9 @@ import '../../../core/undo/pending_action_queue.dart';
 import '../../../core/undo/undoable_action.dart';
 import '../../../data/database/daos/transaction_dao.dart';
 import '../../../data/database/tables/enums.dart';
+import '../../../data/models/exchange_rate_entry.dart';
 import '../../../data/models/transaction_filter.dart';
+import '../../../data/repositories/exchange_rate_repository.dart';
 import '../../../data/repositories/settings_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../data/models/wallet.dart';
@@ -62,6 +65,8 @@ class TransactionListRow {
     this.isRecurring = false,
     required this.baseAmountMinor,
     required this.baseCurrencyCode,
+    this.equivalentAmountMinor,
+    this.equivalentCurrencyCode,
   });
 
   final int id;
@@ -108,6 +113,8 @@ class TransactionListRow {
   /// The app's base currency code (e.g. 'TRY') — used to format
   /// [baseAmountMinor] when it differs from [currencyCode].
   final String baseCurrencyCode;
+  final int? equivalentAmountMinor;
+  final String? equivalentCurrencyCode;
 }
 
 /// Semantic accent (ARGB int) for a transaction with no category color.
@@ -117,7 +124,13 @@ int _accentForType(TransactionType type) => switch (type) {
   TransactionType.transfer => AppColors.transfer.toARGB32(),
 };
 
-TransactionListRow _toRow(TransactionListRowData d, String baseCurrencyCode) {
+TransactionListRow _toRow(
+  TransactionListRowData d,
+  String baseCurrencyCode,
+  String primaryCurrencyCode,
+  List<ExchangeRateEntry> rates,
+  CurrencyService currencyService,
+) {
   final TransactionRowCategory? primary = d.categories.isEmpty
       ? null
       : d.categories.first;
@@ -149,7 +162,113 @@ TransactionListRow _toRow(TransactionListRowData d, String baseCurrencyCode) {
     isRecurring: d.isRecurring,
     baseAmountMinor: d.baseAmountMinor,
     baseCurrencyCode: baseCurrencyCode,
+    equivalentAmountMinor: _equivalentAmountMinor(
+      d,
+      baseCurrencyCode,
+      primaryCurrencyCode,
+      rates,
+      currencyService,
+    ),
+    equivalentCurrencyCode: primaryCurrencyCode,
   );
+}
+
+int? _equivalentAmountMinor(
+  TransactionListRowData row,
+  String baseCurrencyCode,
+  String primaryCurrencyCode,
+  List<ExchangeRateEntry> rates,
+  CurrencyService currencyService,
+) {
+  if (row.currencyCode == primaryCurrencyCode ||
+      !currencyService.isSupported(primaryCurrencyCode)) {
+    return null;
+  }
+  if (primaryCurrencyCode == baseCurrencyCode) {
+    return row.baseAmountMinor;
+  }
+
+  final double? directRate = _latestRate(
+    rates,
+    row.currencyCode,
+    primaryCurrencyCode,
+    row.valueDate,
+  );
+  if (directRate != null) {
+    return currencyService.convertMinor(
+      amountMinor: row.amountMinor,
+      fromCode: row.currencyCode,
+      toCode: primaryCurrencyCode,
+      rate: directRate,
+    );
+  }
+
+  final double? inverseRate = _latestRate(
+    rates,
+    primaryCurrencyCode,
+    row.currencyCode,
+    row.valueDate,
+  );
+  if (inverseRate != null && inverseRate != 0) {
+    return currencyService.convertMinor(
+      amountMinor: row.amountMinor,
+      fromCode: row.currencyCode,
+      toCode: primaryCurrencyCode,
+      rate: 1 / inverseRate,
+    );
+  }
+
+  final double? baseToPrimary = _latestRate(
+    rates,
+    baseCurrencyCode,
+    primaryCurrencyCode,
+    row.valueDate,
+  );
+  if (baseToPrimary != null) {
+    return currencyService.convertMinor(
+      amountMinor: row.baseAmountMinor,
+      fromCode: baseCurrencyCode,
+      toCode: primaryCurrencyCode,
+      rate: baseToPrimary,
+    );
+  }
+
+  final double? primaryToBase = _latestRate(
+    rates,
+    primaryCurrencyCode,
+    baseCurrencyCode,
+    row.valueDate,
+  );
+  if (primaryToBase != null && primaryToBase != 0) {
+    return currencyService.convertMinor(
+      amountMinor: row.baseAmountMinor,
+      fromCode: baseCurrencyCode,
+      toCode: primaryCurrencyCode,
+      rate: 1 / primaryToBase,
+    );
+  }
+
+  return null;
+}
+
+double? _latestRate(
+  List<ExchangeRateEntry> rates,
+  String fromCode,
+  String toCode,
+  DateTime onOrBefore,
+) {
+  ExchangeRateEntry? best;
+  for (final ExchangeRateEntry rate in rates) {
+    if (rate.baseCurrency != fromCode ||
+        rate.quoteCurrency != toCode ||
+        rate.asOfDate.isAfter(onOrBefore)) {
+      continue;
+    }
+    if (best == null || rate.asOfDate.isAfter(best.asOfDate)) {
+      best = rate;
+    }
+  }
+  return best?.rate;
 }
 
 /// Page size for the transaction list's growing-window pagination. The query is
@@ -249,6 +368,11 @@ Stream<List<TransactionListRow>> transactionList(Ref ref) {
     walletIds: resolvedWalletIds,
   );
   final String baseCurrency = ref.watch(baseCurrencyProvider);
+  final String primaryCurrency = ref.watch(primaryCurrencyProvider);
+  final CurrencyService currencyService = ref.watch(currencyServiceProvider);
+  final List<ExchangeRateEntry> rates =
+      ref.watch(exchangeRateEntriesProvider).value ??
+      const <ExchangeRateEntry>[];
 
   return ref
       .watch(transactionRepositoryProvider)
@@ -259,7 +383,15 @@ Stream<List<TransactionListRow>> transactionList(Ref ref) {
       )
       .map(
         (List<TransactionListRowData> rows) => rows
-            .map((TransactionListRowData d) => _toRow(d, baseCurrency))
+            .map(
+              (TransactionListRowData d) => _toRow(
+                d,
+                baseCurrency,
+                primaryCurrency,
+                rates,
+                currencyService,
+              ),
+            )
             .toList(growable: false),
       );
 }

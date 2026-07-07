@@ -4,7 +4,7 @@ import '../../database/app_database.dart' as db;
 import '../exchange_rate_entry.dart';
 
 /// Mappers between the Drift `ExchangeRates` row and the [ExchangeRateEntry]
-/// domain model. `rate` round-trips exactly via the Drift `DecimalConverter`.
+/// domain model. `rate` round-trips as the raw SQLite REAL/double value.
 
 extension ExchangeRateRowMapper on db.ExchangeRate {
   ExchangeRateEntry toDomain() => ExchangeRateEntry(

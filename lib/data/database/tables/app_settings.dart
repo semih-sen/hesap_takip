@@ -6,6 +6,8 @@ class AppSettings extends Table {
   IntColumn get id => integer().withDefault(const Constant(1))();
   TextColumn get baseCurrencyCode =>
       text().withLength(min: 3, max: 3).withDefault(const Constant('TRY'))();
+  TextColumn get primaryCurrencyCode =>
+      text().withLength(min: 3, max: 3).withDefault(const Constant('TRY'))();
   IntColumn get firstDayOfWeek =>
       integer().withDefault(const Constant(1))(); // Mon
 

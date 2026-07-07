@@ -8,6 +8,7 @@ import '../settings.dart';
 extension AppSettingRowMapper on db.AppSetting {
   Settings toDomain() => Settings(
     baseCurrencyCode: baseCurrencyCode,
+    primaryCurrencyCode: primaryCurrencyCode,
     firstDayOfWeek: firstDayOfWeek,
   );
 }

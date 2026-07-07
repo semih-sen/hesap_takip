@@ -234,7 +234,7 @@ class TransactionListItem extends StatelessWidget {
     final List<Widget> left = <Widget>[];
 
     if (row.isRecurring) {
-      left.add(Icon(Icons.repeat, size: 14, color: theme.colorScheme.primary));
+      left.add(Icon(Icons.loop, size: 14, color: theme.colorScheme.primary));
       if (row.categories.isNotEmpty) {
         left.add(const SizedBox(width: AppSpacing.sm));
       }
@@ -288,13 +288,15 @@ class TransactionListItem extends StatelessWidget {
 
     // Right side: foreign-currency equivalent (only when txn currency ≠ base).
     Widget? foreignAmount;
-    if (row.currencyCode != row.baseCurrencyCode) {
+    final int? equivalentAmountMinor = row.equivalentAmountMinor;
+    final String? equivalentCurrencyCode = row.equivalentCurrencyCode;
+    if (equivalentAmountMinor != null && equivalentCurrencyCode != null) {
       final String fSign = row.flowDirection == FlowDirection.inflow
           ? '+'
           : '−';
       final String baseFormatted = currency.format(
-        row.baseAmountMinor,
-        row.baseCurrencyCode,
+        equivalentAmountMinor,
+        equivalentCurrencyCode,
       );
       foreignAmount = Text(
         '$fSign$baseFormatted',

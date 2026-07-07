@@ -299,7 +299,7 @@ void main() {
       ExchangeRatesCompanion.insert(
         baseCurrency: 'USD',
         quoteCurrency: 'TRY',
-        rate: Decimal.parse('30'),
+        rate: 30.0,
         asOfDate: DateTime(2026, 1, 1),
       ),
     );

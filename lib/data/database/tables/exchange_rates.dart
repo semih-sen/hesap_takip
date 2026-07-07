@@ -1,17 +1,15 @@
 import 'package:drift/drift.dart';
 
-import '../converters/decimal_converter.dart';
-
-/// Exchange-rate cache (PROJECT_PLAN §5.2).
+/// Exchange-rate cache (PROJECT_PLAN section 5.2).
 ///
 /// A helper used to prefill the rate on new transactions; the authoritative
-/// snapshot always lives on the transaction row itself. `rate` is stored
-/// exactly as text (never REAL/double).
+/// snapshot always lives on the transaction row itself. `rate` is stored as the
+/// raw SQLite REAL multiplier, independent of currency minor digits.
 class ExchangeRates extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get baseCurrency => text().withLength(min: 3, max: 3)();
   TextColumn get quoteCurrency => text().withLength(min: 3, max: 3)();
-  TextColumn get rate => text().map(const DecimalConverter())();
+  RealColumn get rate => real()();
   DateTimeColumn get asOfDate => dateTime()(); // date-only
   TextColumn get source => text().nullable()();
 }

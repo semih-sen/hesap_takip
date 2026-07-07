@@ -70,3 +70,8 @@ class DriftExchangeRateRepository implements ExchangeRateRepository {
 @Riverpod(keepAlive: true)
 ExchangeRateRepository exchangeRateRepository(Ref ref) =>
     DriftExchangeRateRepository(ref.watch(appDatabaseProvider));
+
+/// Reactive stream of cached rates for application-layer projections.
+@riverpod
+Stream<List<ExchangeRateEntry>> exchangeRateEntries(Ref ref) =>
+    ref.watch(exchangeRateRepositoryProvider).watchRates();

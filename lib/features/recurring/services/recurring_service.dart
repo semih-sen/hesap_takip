@@ -101,7 +101,7 @@ class RecurringService {
                   : TransactionStatus.pending,
               amountMinor: rule.amountMinor,
               currencyCode: rule.currencyCode,
-              exchangeRateToBase: snap.rate,
+              exchangeRateToBase: Decimal.parse(snap.rate.toString()),
               baseAmountMinor: snap.baseMinor,
               valueDate: next,
               note: Value(rule.note),
@@ -181,14 +181,14 @@ class RecurringService {
     DateTime asOf,
   ) async {
     if (rule.currencyCode == base) {
-      return _RateSnapshot(Decimal.one, rule.amountMinor);
+      return _RateSnapshot(1.0, rule.amountMinor);
     }
     final ExchangeRate? cached = await _db.exchangeRateDao.getLatestRate(
       baseCurrency: rule.currencyCode,
       quoteCurrency: base,
       asOf: asOf,
     );
-    final Decimal rate = cached?.rate ?? Decimal.one;
+    final double rate = cached?.rate ?? 1.0;
     final int baseMinor = _currency.convertMinor(
       amountMinor: rule.amountMinor,
       fromCode: rule.currencyCode,
@@ -202,7 +202,7 @@ class RecurringService {
 /// A resolved rate + base-amount snapshot for one generated occurrence.
 class _RateSnapshot {
   const _RateSnapshot(this.rate, this.baseMinor);
-  final Decimal rate;
+  final double rate;
   final int baseMinor;
 }
 

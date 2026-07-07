@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../app/router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/currency/currency.dart';
 import '../../../core/currency/currency_service.dart';
 import '../../../data/repositories/currency_repository.dart';
+import '../../../data/repositories/settings_repository.dart';
 import 'currency_form_page.dart';
 
 class CurrenciesScreen extends ConsumerWidget {
@@ -15,6 +15,7 @@ class CurrenciesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Currency>> currenciesState = ref.watch(currenciesProvider);
+    final String primaryCurrency = ref.watch(primaryCurrencyProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -27,11 +28,44 @@ class CurrenciesScreen extends ConsumerWidget {
           if (currencies.isEmpty) {
             return const Center(child: Text('Hiç para birimi yok.'));
           }
+          final List<String> codes = <String>[for (final Currency c in currencies) c.code]
+            ..sort();
           return ListView.separated(
             padding: const EdgeInsets.only(bottom: 80),
-            itemCount: currencies.length,
+            itemCount: currencies.length + 1,
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) {
+              if (index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: codes.contains(primaryCurrency)
+                        ? primaryCurrency
+                        : codes.first,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Birincil döviz',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: <DropdownMenuItem<String>>[
+                      for (final String code in codes)
+                        DropdownMenuItem<String>(
+                          value: code,
+                          child: Text(code),
+                        ),
+                    ],
+                    onChanged: (String? value) {
+                      if (value == null) {
+                        return;
+                      }
+                      ref
+                          .read(settingsRepositoryProvider)
+                          .setPrimaryCurrency(value);
+                    },
+                  ),
+                );
+              }
+              index -= 1;
               final Currency c = currencies[index];
               return ListTile(
                 leading: CircleAvatar(

@@ -203,8 +203,9 @@ class _ExchangeRateFormState extends ConsumerState<_ExchangeRateForm> {
         );
       return;
     }
-    final Decimal rate =
-        parseTurkishAmount(_rateController.text) ?? Decimal.one;
+    final double rate =
+        (parseExchangeRateAmount(_rateController.text) ?? Decimal.one)
+            .toDouble();
     Navigator.of(context).pop(
       ExchangeRateEntry(
         id: 0,
@@ -287,7 +288,7 @@ class _ExchangeRateFormState extends ConsumerState<_ExchangeRateForm> {
                 border: const OutlineInputBorder(),
               ),
               validator: (String? v) {
-                final Decimal? parsed = parseTurkishAmount(v ?? '');
+                final Decimal? parsed = parseExchangeRateAmount(v ?? '');
                 if (parsed == null || parsed <= Decimal.zero) {
                   return l10n.validationInvalidRate;
                 }

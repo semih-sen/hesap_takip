@@ -19,6 +19,9 @@ abstract interface class SettingsRepository {
   /// Sets the base currency (affects only NEW transactions; §6).
   Future<void> setBaseCurrency(String currencyCode);
 
+  /// Sets the primary display currency for transaction-list equivalents.
+  Future<void> setPrimaryCurrency(String currencyCode);
+
   /// Sets the first day of the week (1 = Monday).
   Future<void> setFirstDayOfWeek(int firstDayOfWeek);
 }
@@ -39,6 +42,10 @@ class DriftSettingsRepository implements SettingsRepository {
   @override
   Future<void> setBaseCurrency(String currencyCode) =>
       _db.settingsDao.updateBaseCurrency(currencyCode);
+
+  @override
+  Future<void> setPrimaryCurrency(String currencyCode) =>
+      _db.settingsDao.updatePrimaryCurrency(currencyCode);
 
   @override
   Future<void> setFirstDayOfWeek(int firstDayOfWeek) =>
@@ -63,4 +70,12 @@ Stream<Settings> settings(Ref ref) =>
 String baseCurrency(Ref ref) {
   final AsyncValue<Settings> snapshot = ref.watch(settingsProvider);
   return snapshot.asData?.value.baseCurrencyCode ?? 'TRY';
+}
+
+/// The currency used for transaction-list equivalent amounts.
+@riverpod
+String primaryCurrency(Ref ref) {
+  final AsyncValue<Settings> snapshot = ref.watch(settingsProvider);
+  final Settings? settings = snapshot.asData?.value;
+  return settings?.primaryCurrencyCode ?? settings?.baseCurrencyCode ?? 'TRY';
 }

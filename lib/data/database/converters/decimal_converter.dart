@@ -3,9 +3,8 @@ import 'package:drift/drift.dart';
 
 /// Persists a [Decimal] as its canonical string form.
 ///
-/// PROJECT_PLAN §2/§6: exchange rates must never be stored as REAL/double —
-/// float representation would corrupt rate arithmetic. Storing the decimal as
-/// text preserves the exact value that was snapshotted on the transaction.
+/// Used for legacy transaction rate snapshots that still preserve their
+/// original decimal text. Cached exchange-rate rows use SQLite REAL/double.
 class DecimalConverter extends TypeConverter<Decimal, String> {
   const DecimalConverter();
 

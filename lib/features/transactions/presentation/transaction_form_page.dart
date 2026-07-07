@@ -192,7 +192,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final ExchangeRateEntryLookup lookup = ExchangeRateEntryLookup(
       ref.read(exchangeRateRepositoryProvider),
     );
-    final Decimal? cached = await lookup.rate(
+    final double? cached = await lookup.rate(
       wallet.currencyCode,
       base,
       _valueDate,
@@ -200,7 +200,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (!mounted) {
       return;
     }
-    _rateController.text = (cached ?? Decimal.one).toString();
+    _rateController.text = (cached ?? 1.0).toString();
   }
 
   Future<void> _pickDate() async {
@@ -239,7 +239,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       amountMinor: amountMinor,
       fromCode: currencyCode,
       toCode: base,
-      rate: rate,
+      rate: rate.toDouble(),
     );
     final DateTime now = DateTime.now();
 
@@ -638,20 +638,20 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       amountMinor: amountMinor,
       fromCode: currencyCode,
       toCode: base,
-      rate: rate,
+      rate: rate.toDouble(),
     );
     return '≈ ${_currency.format(baseMinor, base)}';
   }
 }
 
 /// Thin adapter turning an [ExchangeRateRepository] lookup into a plain
-/// [Decimal] rate (or null), keeping the form's prefill logic terse.
+/// double rate (or null), keeping the form's prefill logic terse.
 class ExchangeRateEntryLookup {
   const ExchangeRateEntryLookup(this._repo);
 
   final ExchangeRateRepository _repo;
 
-  Future<Decimal?> rate(String from, String to, DateTime onOrBefore) async {
+  Future<double?> rate(String from, String to, DateTime onOrBefore) async {
     final entry = await _repo.latestRate(from, to, onOrBefore: onOrBefore);
     return entry?.rate;
   }

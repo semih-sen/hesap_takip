@@ -20,6 +20,9 @@ class SettingsDao extends DatabaseAccessor<AppDatabase>
   Future<int> updateBaseCurrency(String currencyCode) => _singletonUpdate()
       .write(AppSettingsCompanion(baseCurrencyCode: Value(currencyCode)));
 
+  Future<int> updatePrimaryCurrency(String currencyCode) => _singletonUpdate()
+      .write(AppSettingsCompanion(primaryCurrencyCode: Value(currencyCode)));
+
   Future<int> updateFirstDayOfWeek(int firstDayOfWeek) => _singletonUpdate()
       .write(AppSettingsCompanion(firstDayOfWeek: Value(firstDayOfWeek)));
 

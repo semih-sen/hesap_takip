@@ -10,13 +10,12 @@ import 'currency.dart';
 
 part 'currency_service.g.dart';
 
-/// The money/currency engine (PROJECT_PLAN §6).
+/// The money/currency engine.
 ///
-/// Everything here is deterministic and side-effect free. Rounding is explicit
-/// **half-up** (ties away from zero) applied exactly once at each conversion
-/// boundary — never chained. All arithmetic stays in [Decimal] until the final
-/// integer minor-unit result; no `double` participates in a money path (the
-/// `toDouble()` in [format] is a display-only boundary).
+/// Rounding is explicit half-up (ties away from zero) and applied exactly once
+/// at each conversion boundary. Monetary parsing/formatting uses [Decimal],
+/// while exchange-rate conversion intentionally applies the raw `double`
+/// multiplier without compensating for either currency's minor digits.
 class CurrencyService {
   const CurrencyService(this._currencies);
 
@@ -65,18 +64,19 @@ class CurrencyService {
     required int amountMinor,
     required String fromCode,
     required String toCode,
-    required Decimal rate,
+    required double rate,
   }) {
     final Decimal major = fromMinor(amountMinor, fromCode);
-    final Decimal converted = major * rate;
+    final Decimal converted = Decimal.parse(
+      (major.toDouble() * rate).toString(),
+    );
     return toMinor(converted, toCode);
   }
 
   /// Formats [minor] units of [code] with locale-aware grouping.
   ///
   /// Symbol placement respects [Currency.symbolOnLeft] rather than the
-  /// locale's default currency pattern, fixing the bug where TRY's ₺
-  /// appeared on the left instead of the right.
+  /// locale's default currency pattern.
   String format(int minor, String code, {Locale? locale}) {
     final Currency currency = byCode(code);
     final String localeStr = locale?.toString() ?? 'tr_TR';
@@ -110,15 +110,20 @@ Stream<List<Currency>> currencies(Ref ref) {
 /// still loading, preventing UI flashes.
 @Riverpod(keepAlive: true)
 CurrencyService currencyService(Ref ref) {
-  final AsyncValue<List<Currency>> asyncCurrencies = ref.watch(currenciesProvider);
-  
+  final AsyncValue<List<Currency>> asyncCurrencies =
+      ref.watch(currenciesProvider);
+
   final List<Currency> currencies = asyncCurrencies.asData?.value ??
-      kDefaultCurrencies.map((SeedCurrency c) => Currency(
-            code: c.code,
-            symbol: c.symbol,
-            minorDigits: c.minorDigits,
-            symbolOnLeft: c.symbolOnLeft,
-          )).toList();
-          
+      kDefaultCurrencies
+          .map(
+            (SeedCurrency c) => Currency(
+              code: c.code,
+              symbol: c.symbol,
+              minorDigits: c.minorDigits,
+              symbolOnLeft: c.symbolOnLeft,
+            ),
+          )
+          .toList();
+
   return CurrencyService(currencies);
 }

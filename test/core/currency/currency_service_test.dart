@@ -128,7 +128,7 @@ void main() {
         amountMinor: 10000,
         fromCode: 'USD',
         toCode: 'TRY',
-        rate: Decimal.parse('34.10'),
+        rate: 34.10,
       );
       expect(result, 341000);
     });
@@ -139,7 +139,7 @@ void main() {
         amountMinor: 100,
         fromCode: 'USD',
         toCode: 'TRY',
-        rate: Decimal.parse('2.005'),
+        rate: 2.005,
       );
       expect(result, 201);
     });
@@ -150,9 +150,21 @@ void main() {
         amountMinor: 10000,
         fromCode: 'USD',
         toCode: 'JPY',
-        rate: Decimal.parse('150.567'),
+        rate: 150.567,
       );
       expect(result, 15057);
+    });
+
+    test('raw double rate ignores source and target minor digit counts', () {
+      // 100.00 USD at 150.5 is 15050 JPY. The rate is not shifted by USD's
+      // 2 minor digits or JPY's 0 minor digits.
+      final int result = service.convertMinor(
+        amountMinor: 10000,
+        fromCode: 'USD',
+        toCode: 'JPY',
+        rate: 150.5,
+      );
+      expect(result, 15050);
     });
 
     test('out of a 0-digit currency (JPY -> USD)', () {
@@ -161,7 +173,7 @@ void main() {
         amountMinor: 15000,
         fromCode: 'JPY',
         toCode: 'USD',
-        rate: Decimal.parse('0.0066'),
+        rate: 0.0066,
       );
       expect(result, 9900);
     });

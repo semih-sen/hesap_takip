@@ -154,12 +154,12 @@ void main() {
         recurringRuleId: Value(rule),
       ),
     );
-    // Cached exchange rate (Decimal).
+    // Cached exchange rate.
     await db.exchangeRateDao.insertRate(
       ExchangeRatesCompanion.insert(
         baseCurrency: 'USD',
         quoteCurrency: 'TRY',
-        rate: Decimal.parse('30.55'),
+        rate: 30.55,
         asOfDate: DateTime(2026, 1, 1),
       ),
     );
@@ -198,11 +198,11 @@ void main() {
       );
     }
 
-    // Decimal + key fields survive precisely.
+    // Rate + key fields survive.
     final ExchangeRate rate = await (target.select(
       target.exchangeRates,
     )).getSingle();
-    expect(rate.rate, Decimal.parse('30.55'));
+    expect(rate.rate, 30.55);
 
     // The self-referencing child still points at its parent.
     final List<Transaction> children = await (target.select(

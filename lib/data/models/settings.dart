@@ -7,6 +7,7 @@ part 'settings.freezed.dart';
 abstract class Settings with _$Settings {
   const factory Settings({
     required String baseCurrencyCode,
+    required String primaryCurrencyCode,
     required int firstDayOfWeek,
   }) = _Settings;
 }
