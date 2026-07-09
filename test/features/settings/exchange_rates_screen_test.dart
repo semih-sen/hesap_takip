@@ -45,7 +45,7 @@ void main() {
         db.ExchangeRatesCompanion.insert(
           baseCurrency: 'USD',
           quoteCurrency: 'TRY',
-          rate: 30.5,
+          rate: Decimal.parse('30.5'),
           asOfDate: DateTime(2026, 1, 1),
         ),
       ),
@@ -74,7 +74,7 @@ void main() {
         db.ExchangeRatesCompanion.insert(
           baseCurrency: 'EUR',
           quoteCurrency: 'TRY',
-          rate: 35.0,
+          rate: Decimal.parse('35.0'),
           asOfDate: DateTime(2026, 1, 1),
         ),
       ),

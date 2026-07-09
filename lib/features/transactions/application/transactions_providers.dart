@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -198,7 +199,7 @@ int? _equivalentAmountMinor(
     return row.baseAmountMinor;
   }
 
-  final double? directRate = _latestRate(
+  final Decimal? directRate = _latestRate(
     rates,
     row.currencyCode,
     primaryCurrencyCode,
@@ -213,22 +214,22 @@ int? _equivalentAmountMinor(
     );
   }
 
-  final double? inverseRate = _latestRate(
+  final Decimal? inverseRate = _latestRate(
     rates,
     primaryCurrencyCode,
     row.currencyCode,
     row.valueDate,
   );
-  if (inverseRate != null && inverseRate != 0) {
+  if (inverseRate != null && inverseRate != Decimal.zero) {
     return currencyService.convertMinor(
       amountMinor: row.amountMinor,
       fromCode: row.currencyCode,
       toCode: primaryCurrencyCode,
-      rate: 1 / inverseRate,
+      rate: _reciprocal(inverseRate),
     );
   }
 
-  final double? baseToPrimary = _latestRate(
+  final Decimal? baseToPrimary = _latestRate(
     rates,
     baseCurrencyCode,
     primaryCurrencyCode,
@@ -243,25 +244,25 @@ int? _equivalentAmountMinor(
     );
   }
 
-  final double? primaryToBase = _latestRate(
+  final Decimal? primaryToBase = _latestRate(
     rates,
     primaryCurrencyCode,
     baseCurrencyCode,
     row.valueDate,
   );
-  if (primaryToBase != null && primaryToBase != 0) {
+  if (primaryToBase != null && primaryToBase != Decimal.zero) {
     return currencyService.convertMinor(
       amountMinor: row.baseAmountMinor,
       fromCode: baseCurrencyCode,
       toCode: primaryCurrencyCode,
-      rate: 1 / primaryToBase,
+      rate: _reciprocal(primaryToBase),
     );
   }
 
   return null;
 }
 
-double? _latestRate(
+Decimal? _latestRate(
   List<ExchangeRateEntry> rates,
   String fromCode,
   String toCode,
@@ -280,6 +281,9 @@ double? _latestRate(
   }
   return best?.rate;
 }
+
+Decimal _reciprocal(Decimal value) =>
+    (Decimal.one / value).toDecimal(scaleOnInfinitePrecision: 12);
 
 /// Page size for the transaction list's growing-window pagination. The query is
 /// bounded to `pageSize * visiblePageCount` so a 5k-row ledger is never streamed

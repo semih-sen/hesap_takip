@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/currency/currency_service.dart';
@@ -51,7 +52,7 @@ class BalanceService {
           amountMinor: entry.value,
           fromCode: entry.key,
           toCode: base,
-          rate: cached?.rate ?? 1.0,
+          rate: cached?.rate ?? Decimal.one,
         );
       }
       yield total;
@@ -61,8 +62,10 @@ class BalanceService {
 
 /// App-lifetime singleton [BalanceService].
 @Riverpod(keepAlive: true)
-BalanceService balanceService(Ref ref) =>
-    BalanceService(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));
+BalanceService balanceService(Ref ref) => BalanceService(
+  ref.watch(appDatabaseProvider),
+  ref.watch(currencyServiceProvider),
+);
 
 /// Reactive balance (minor units) for a single wallet.
 @riverpod

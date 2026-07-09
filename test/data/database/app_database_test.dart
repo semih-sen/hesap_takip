@@ -211,7 +211,7 @@ void main() {
         ExchangeRatesCompanion.insert(
           baseCurrency: 'USD',
           quoteCurrency: 'TRY',
-          rate: 33.50,
+          rate: Decimal.parse('33.50'),
           asOfDate: DateTime(2026, 1, 1),
         ),
       );
@@ -219,7 +219,7 @@ void main() {
         ExchangeRatesCompanion.insert(
           baseCurrency: 'USD',
           quoteCurrency: 'TRY',
-          rate: 34.10,
+          rate: Decimal.parse('34.10'),
           asOfDate: DateTime(2026, 6, 1),
         ),
       );
@@ -230,7 +230,7 @@ void main() {
         asOf: DateTime(2026, 3, 1),
       );
       // Only the 1 Jan rate is on/before 1 Mar.
-      expect(latest!.rate, 33.50);
+      expect(latest!.rate, Decimal.parse('33.50'));
     });
 
     test('SettingsDao updates base currency in place', () async {

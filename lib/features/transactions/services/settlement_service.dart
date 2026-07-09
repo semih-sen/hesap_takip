@@ -123,7 +123,7 @@ class SettlementService {
             amountMinor: paymentAmountMinor,
             fromCode: parent.currencyCode,
             toCode: base,
-            rate: parent.exchangeRateToBase.toDouble(),
+            rate: parent.exchangeRateToBase,
           );
 
     late final int childId;
@@ -216,5 +216,7 @@ class SettlementService {
 
 /// App-lifetime singleton [SettlementService].
 @Riverpod(keepAlive: true)
-SettlementService settlementService(Ref ref) =>
-    SettlementService(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));
+SettlementService settlementService(Ref ref) => SettlementService(
+  ref.watch(appDatabaseProvider),
+  ref.watch(currencyServiceProvider),
+);

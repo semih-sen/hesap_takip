@@ -3,8 +3,8 @@ import 'package:drift/drift.dart';
 
 /// Persists a [Decimal] as its canonical string form.
 ///
-/// Used for legacy transaction rate snapshots that still preserve their
-/// original decimal text. Cached exchange-rate rows use SQLite REAL/double.
+/// Used for transaction rate snapshots and cached exchange-rate rows so the
+/// original decimal value is not forced through a binary floating point type.
 class DecimalConverter extends TypeConverter<Decimal, String> {
   const DecimalConverter();
 

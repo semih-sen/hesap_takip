@@ -11,7 +11,6 @@ import '../transactions/presentation/widgets/transaction_filter_sheet.dart';
 import '../transactions/presentation/widgets/transaction_list_view.dart';
 import 'widgets/summary_account_selector.dart';
 import 'widgets/summary_card.dart';
-import 'widgets/summary_period_switcher.dart';
 
 /// Dashboard (Phase 6 + 7): the Summary section (period switcher + base-currency
 /// income/expense/net card + account selector, all driven by the Summary scope)
@@ -88,8 +87,6 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: const <Widget>[
-                  SummaryPeriodSwitcher(),
-                  SizedBox(height: AppSpacing.xs / 1.5),
                   SummaryCard(),
                   SizedBox(height: AppSpacing.xs / 1.5),
                   SummaryAccountSelector(),

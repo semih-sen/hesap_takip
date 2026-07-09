@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'exchange_rate_entry.freezed.dart';
@@ -13,7 +14,7 @@ abstract class ExchangeRateEntry with _$ExchangeRateEntry {
     required int id,
     required String baseCurrency,
     required String quoteCurrency,
-    required double rate,
+    required Decimal rate,
     required DateTime asOfDate,
     String? source,
   }) = _ExchangeRateEntry;

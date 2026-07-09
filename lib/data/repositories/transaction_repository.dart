@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -127,8 +128,6 @@ class DriftTransactionRepository implements TransactionRepository {
     carryForwardOverdue: carryForwardOverdue,
   );
 
-
-
   @override
   Stream<SummaryData> watchSummary({
     required Set<int> walletIds,
@@ -143,8 +142,7 @@ class DriftTransactionRepository implements TransactionRepository {
     final List<db.Wallet> effective = all
         .where(
           (db.Wallet w) =>
-              !w.isArchived &&
-              (walletIds.isEmpty || walletIds.contains(w.id)),
+              !w.isArchived && (walletIds.isEmpty || walletIds.contains(w.id)),
         )
         .toList(growable: false);
 
@@ -168,7 +166,7 @@ class DriftTransactionRepository implements TransactionRepository {
         quoteCurrency: base,
         asOf: DateTime(9999, 12, 31),
       );
-      final double rate = cached?.rate ?? 1.0;
+      final Decimal rate = cached?.rate ?? Decimal.one;
       initialBaseMinor += _currency.convertMinor(
         amountMinor: w.initialBalanceMinor,
         fromCode: w.currencyCode,
@@ -202,7 +200,8 @@ class DriftTransactionRepository implements TransactionRepository {
     final int incomeTotal = b.collectedIncomeMinor + b.receivableIncomeMinor;
     final int expenseTotal = b.paidExpenseMinor + b.payableExpenseMinor;
     final int netBalance = incomeTotal - expenseTotal;
-    final int carriedOver = initialBaseMinor +
+    final int carriedOver =
+        initialBaseMinor +
         b.carriedNonTransferSignedMinor +
         b.carriedTransferSignedMinor;
     // Devredecek = Devreden + period net + in-period completed transfer legs, so
@@ -355,10 +354,13 @@ class DriftTransactionRepository implements TransactionRepository {
 /// recurring keep their own rules and must not route through here.
 TransactionStatus statusForValueDate(DateTime valueDate) =>
     valueDate.isAfter(AppDate.today())
-        ? TransactionStatus.pending
-        : TransactionStatus.completed;
+    ? TransactionStatus.pending
+    : TransactionStatus.completed;
 
 /// App-lifetime singleton transaction repository.
 @Riverpod(keepAlive: true)
 TransactionRepository transactionRepository(Ref ref) =>
-    DriftTransactionRepository(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));
+    DriftTransactionRepository(
+      ref.watch(appDatabaseProvider),
+      ref.watch(currencyServiceProvider),
+    );

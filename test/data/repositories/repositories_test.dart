@@ -127,7 +127,10 @@ void main() {
     test('create then reactive read returns a domain Transaction', () async {
       final AccountRepository accounts = DriftAccountRepository(db);
       final WalletRepository wallets = DriftWalletRepository(db);
-      final TransactionRepository txns = DriftTransactionRepository(db, const CurrencyService([]));
+      final TransactionRepository txns = DriftTransactionRepository(
+        db,
+        const CurrencyService([]),
+      );
 
       final int accountId = await accounts.createAccount(newAccount());
       final int walletId = await wallets.createWallet(newWallet(accountId));
@@ -156,14 +159,36 @@ void main() {
         'TRY',
         onOrBefore: DateTime(2026, 3, 1),
       );
-      expect(atMarch!.rate, 33.50);
+      expect(atMarch!.rate, Decimal.parse('33.50'));
 
       // No bound → newest overall.
       final ExchangeRateEntry? latest = await repo.latestRate('USD', 'TRY');
-      expect(latest!.rate, 34.10);
+      expect(latest!.rate, Decimal.parse('34.10'));
 
       // Unknown pair → null.
       expect(await repo.latestRate('EUR', 'TRY'), isNull);
+    });
+
+    test('updateRate edits an existing cached rate', () async {
+      final ExchangeRateRepository repo = DriftExchangeRateRepository(db);
+      final int id = await repo.addRate(_rate('33.50', DateTime(2026, 1, 1)));
+
+      await repo.updateRate(
+        ExchangeRateEntry(
+          id: id,
+          baseCurrency: 'EUR',
+          quoteCurrency: 'TRY',
+          rate: Decimal.parse('36.25'),
+          asOfDate: DateTime(2026, 2, 1),
+        ),
+      );
+
+      expect(await repo.latestRate('USD', 'TRY'), isNull);
+      final ExchangeRateEntry? updated = await repo.latestRate('EUR', 'TRY');
+      expect(updated, isNotNull);
+      expect(updated!.id, id);
+      expect(updated.rate, Decimal.parse('36.25'));
+      expect(updated.asOfDate, DateTime(2026, 2, 1));
     });
   });
 
@@ -188,8 +213,6 @@ ExchangeRateEntry _rate(String rate, DateTime asOf) => ExchangeRateEntry(
   id: 0,
   baseCurrency: 'USD',
   quoteCurrency: 'TRY',
-  rate: double.parse(rate),
+  rate: Decimal.parse(rate),
   asOfDate: asOf,
 );
-
-

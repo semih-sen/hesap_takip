@@ -135,7 +135,7 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
       return;
     }
     final Decimal rate =
-        parseTurkishAmount(_rateController.text) ?? Decimal.one;
+        parseExchangeRateAmount(_rateController.text) ?? Decimal.one;
     _toAmountController.text = (amount * rate).toString();
   }
 
@@ -146,7 +146,7 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
     final Wallet? from = _walletById(wallets, _fromWalletId);
     final Wallet? to = _walletById(wallets, _toWalletId);
     if (from != null && to != null && from.currencyCode != to.currencyCode) {
-      final double suggested = await ref
+      final Decimal suggested = await ref
           .read(transferServiceProvider)
           .suggestRate(from.currencyCode, to.currencyCode, _valueDate);
       if (!mounted) {
@@ -207,9 +207,9 @@ class _TransferFormPageState extends ConsumerState<TransferFormPage> {
             to.currencyCode,
           )
         : fromMinor;
-    final double rate = cross
-        ? (parseTurkishAmount(_rateController.text) ?? Decimal.one).toDouble()
-        : 1.0;
+    final Decimal rate = cross
+        ? (parseExchangeRateAmount(_rateController.text) ?? Decimal.one)
+        : Decimal.one;
 
     try {
       final TransferService service = ref.read(transferServiceProvider);

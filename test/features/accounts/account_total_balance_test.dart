@@ -66,26 +66,28 @@ void main() {
     ),
   );
 
-  test('per-currency DAO aggregate groups completed net + initial by currency',
-      () async {
-    final int a = await account();
-    final int tryW = await wallet(a, code: 'TRY', initial: 1000);
-    final int usdW = await wallet(a, code: 'USD', initial: 0);
-    await addCompleted(tryW, amountMinor: 500, code: 'TRY'); // +500
-    await addCompleted(
-      tryW,
-      amountMinor: 200,
-      code: 'TRY',
-      flow: FlowDirection.outflow,
-    ); // -200
-    await addCompleted(usdW, amountMinor: 1000, code: 'USD'); // +1000
+  test(
+    'per-currency DAO aggregate groups completed net + initial by currency',
+    () async {
+      final int a = await account();
+      final int tryW = await wallet(a, code: 'TRY', initial: 1000);
+      final int usdW = await wallet(a, code: 'USD', initial: 0);
+      await addCompleted(tryW, amountMinor: 500, code: 'TRY'); // +500
+      await addCompleted(
+        tryW,
+        amountMinor: 200,
+        code: 'TRY',
+        flow: FlowDirection.outflow,
+      ); // -200
+      await addCompleted(usdW, amountMinor: 1000, code: 'USD'); // +1000
 
-    final Map<String, int> byCurrency = await db.walletDao
-        .watchAccountBalanceByCurrency(a)
-        .first;
-    expect(byCurrency['TRY'], 1300); // 1000 + 500 - 200
-    expect(byCurrency['USD'], 1000);
-  });
+      final Map<String, int> byCurrency = await db.walletDao
+          .watchAccountBalanceByCurrency(a)
+          .first;
+      expect(byCurrency['TRY'], 1300); // 1000 + 500 - 200
+      expect(byCurrency['USD'], 1000);
+    },
+  );
 
   test('archived wallets are excluded from the aggregate', () async {
     final int a = await account();
@@ -104,7 +106,7 @@ void main() {
       ExchangeRatesCompanion.insert(
         baseCurrency: 'USD',
         quoteCurrency: 'TRY',
-        rate: 30.0,
+        rate: Decimal.parse('30.0'),
         asOfDate: DateTime(2026, 1, 1),
       ),
     );
@@ -113,41 +115,39 @@ void main() {
     final int usdW = await wallet(a, code: 'USD', initial: 0);
     await addCompleted(usdW, amountMinor: 1000, code: 'USD'); // 10.00 USD
 
-    final CurrencyService currency = CurrencyService(
-      const [
-  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
-
-],
-    );
+    final CurrencyService currency = CurrencyService(const [
+      Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+      Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+      Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+      Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+      Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+    ]);
     final BalanceService svc = BalanceService(db, currency);
-    final int total = await svc
-        .watchAccountTotalBaseMinor(a, 'TRY')
-        .first;
+    final int total = await svc.watchAccountTotalBaseMinor(a, 'TRY').first;
     // 1000 TRY + (1000 USD-minor = 10 USD * 30 = 300 TRY = 30000 minor)
     expect(total, 1000 + 30000);
     // silence the unused local
     expect(tryW, isPositive);
   });
 
-  test('provider is reactive: adding a transaction updates the total', () async {
-    final int a = await account();
-    final int w = await wallet(a, code: 'TRY', initial: 0);
-    final ProviderContainer container = ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
-    );
-    addTearDown(container.dispose);
+  test(
+    'provider is reactive: adding a transaction updates the total',
+    () async {
+      final int a = await account();
+      final int w = await wallet(a, code: 'TRY', initial: 0);
+      final ProviderContainer container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
 
-    // Keep the stream alive.
-    container.listen(accountTotalBalanceProvider(a), (_, _) {});
-    expect(await container.read(accountTotalBalanceProvider(a).future), 0);
+      // Keep the stream alive.
+      container.listen(accountTotalBalanceProvider(a), (_, _) {});
+      expect(await container.read(accountTotalBalanceProvider(a).future), 0);
 
-    await addCompleted(w, amountMinor: 2500, code: 'TRY');
-    // Give the reactive Drift stream a moment to re-emit.
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(await container.read(accountTotalBalanceProvider(a).future), 2500);
-  });
+      await addCompleted(w, amountMinor: 2500, code: 'TRY');
+      // Give the reactive Drift stream a moment to re-emit.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(await container.read(accountTotalBalanceProvider(a).future), 2500);
+    },
+  );
 }

@@ -30,17 +30,37 @@ class ExchangeRatesScreen extends ConsumerWidget {
   static final DateFormat _dateFormat = DateFormat.yMMMd('tr_TR');
 
   Future<void> _add(BuildContext context, WidgetRef ref) async {
-    final ExchangeRateEntry? entry = await showModalBottomSheet<ExchangeRateEntry>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      builder: (_) => const _ExchangeRateForm(),
-    );
+    final ExchangeRateEntry? entry =
+        await showModalBottomSheet<ExchangeRateEntry>(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          showDragHandle: true,
+          builder: (_) => const _ExchangeRateForm(),
+        );
     if (entry == null || !context.mounted) {
       return;
     }
     await ref.read(exchangeRateRepositoryProvider).addRate(entry);
+  }
+
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref,
+    ExchangeRateEntry current,
+  ) async {
+    final ExchangeRateEntry? entry =
+        await showModalBottomSheet<ExchangeRateEntry>(
+          context: context,
+          isScrollControlled: true,
+          useSafeArea: true,
+          showDragHandle: true,
+          builder: (_) => _ExchangeRateForm(initial: current),
+        );
+    if (entry == null || !context.mounted) {
+      return;
+    }
+    await ref.read(exchangeRateRepositoryProvider).updateRate(entry);
   }
 
   Future<void> _delete(
@@ -117,12 +137,18 @@ class ExchangeRatesScreen extends ConsumerWidget {
                   leading: const Icon(Icons.currency_exchange),
                   title: Text('${e.baseCurrency} → ${e.quoteCurrency}'),
                   subtitle: Text(_dateFormat.format(e.asOfDate)),
+                  onTap: () => _edit(context, ref, e),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Text(
                         e.rate.toString(),
                         style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      IconButton(
+                        tooltip: l10n.actionEdit,
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => _edit(context, ref, e),
                       ),
                       IconButton(
                         tooltip: l10n.actionDelete,
@@ -143,7 +169,9 @@ class ExchangeRatesScreen extends ConsumerWidget {
 
 /// A small add-rate form returned as an [ExchangeRateEntry] (id 0, DB-assigned).
 class _ExchangeRateForm extends ConsumerStatefulWidget {
-  const _ExchangeRateForm();
+  const _ExchangeRateForm({this.initial});
+
+  final ExchangeRateEntry? initial;
 
   @override
   ConsumerState<_ExchangeRateForm> createState() => _ExchangeRateFormState();
@@ -156,15 +184,22 @@ class _ExchangeRateFormState extends ConsumerState<_ExchangeRateForm> {
   late String _from;
   late String _to;
   DateTime _asOf = AppDate.today();
-  
+
   @override
   void initState() {
     super.initState();
     final CurrencyService currencyService = ref.read(currencyServiceProvider);
-    _from = currencyService.all.first.code;
-    _to = currencyService.all.length > 1
-        ? currencyService.all[1].code
-        : currencyService.all.first.code;
+    final ExchangeRateEntry? initial = widget.initial;
+    _from = initial?.baseCurrency ?? currencyService.all.first.code;
+    _to =
+        initial?.quoteCurrency ??
+        (currencyService.all.length > 1
+            ? currencyService.all[1].code
+            : currencyService.all.first.code);
+    _asOf = initial?.asOfDate ?? AppDate.today();
+    if (initial != null) {
+      _rateController.text = initial.rate.toString();
+    }
   }
 
   @override
@@ -203,16 +238,16 @@ class _ExchangeRateFormState extends ConsumerState<_ExchangeRateForm> {
         );
       return;
     }
-    final double rate =
-        (parseExchangeRateAmount(_rateController.text) ?? Decimal.one)
-            .toDouble();
+    final Decimal rate =
+        parseExchangeRateAmount(_rateController.text) ?? Decimal.one;
     Navigator.of(context).pop(
       ExchangeRateEntry(
-        id: 0,
+        id: widget.initial?.id ?? 0,
         baseCurrency: _from,
         quoteCurrency: _to,
         rate: rate,
         asOfDate: _asOf,
+        source: widget.initial?.source,
       ),
     );
   }
@@ -238,7 +273,10 @@ class _ExchangeRateFormState extends ConsumerState<_ExchangeRateForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(l10n.exchangeRateAdd, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              widget.initial == null ? l10n.exchangeRateAdd : l10n.actionEdit,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: AppSpacing.md),
             Row(
               children: <Widget>[
@@ -282,7 +320,9 @@ class _ExchangeRateFormState extends ConsumerState<_ExchangeRateForm> {
             const SizedBox(height: AppSpacing.md),
             TextFormField(
               controller: _rateController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: InputDecoration(
                 labelText: l10n.exchangeRateValueLabel,
                 border: const OutlineInputBorder(),

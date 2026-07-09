@@ -181,14 +181,14 @@ class RecurringService {
     DateTime asOf,
   ) async {
     if (rule.currencyCode == base) {
-      return _RateSnapshot(1.0, rule.amountMinor);
+      return _RateSnapshot(Decimal.one, rule.amountMinor);
     }
     final ExchangeRate? cached = await _db.exchangeRateDao.getLatestRate(
       baseCurrency: rule.currencyCode,
       quoteCurrency: base,
       asOf: asOf,
     );
-    final double rate = cached?.rate ?? 1.0;
+    final Decimal rate = cached?.rate ?? Decimal.one;
     final int baseMinor = _currency.convertMinor(
       amountMinor: rule.amountMinor,
       fromCode: rule.currencyCode,
@@ -202,11 +202,13 @@ class RecurringService {
 /// A resolved rate + base-amount snapshot for one generated occurrence.
 class _RateSnapshot {
   const _RateSnapshot(this.rate, this.baseMinor);
-  final double rate;
+  final Decimal rate;
   final int baseMinor;
 }
 
 /// App-lifetime singleton [RecurringService].
 @Riverpod(keepAlive: true)
-RecurringService recurringService(Ref ref) =>
-    RecurringService(ref.watch(appDatabaseProvider), ref.watch(currencyServiceProvider));
+RecurringService recurringService(Ref ref) => RecurringService(
+  ref.watch(appDatabaseProvider),
+  ref.watch(currencyServiceProvider),
+);

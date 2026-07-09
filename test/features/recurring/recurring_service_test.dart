@@ -17,14 +17,16 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    service = RecurringService(db, const CurrencyService(const [
-  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
-
-]));
+    service = RecurringService(
+      db,
+      const CurrencyService(const [
+        Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+        Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+        Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+        Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+        Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+      ]),
+    );
   });
 
   tearDown(() async {
@@ -86,7 +88,8 @@ void main() {
     ),
   );
 
-  Future<List<Transaction>> txns() => db.transactionDao.watchAllTransactions().first;
+  Future<List<Transaction>> txns() =>
+      db.transactionDao.watchAllTransactions().first;
 
   RecurringRule ruleRow({
     RecurrenceFrequency frequency = RecurrenceFrequency.monthly,
@@ -146,7 +149,10 @@ void main() {
         byWeekday: DateTime.wednesday,
         startDate: DateTime(2026, 3, 4),
       );
-      final DateTime next = service.nextOccurrenceAfter(DateTime(2026, 3, 4), r)!;
+      final DateTime next = service.nextOccurrenceAfter(
+        DateTime(2026, 3, 4),
+        r,
+      )!;
       expect(next.weekday, DateTime.wednesday);
       expect(next, DateTime(2026, 3, 11));
     });
@@ -175,35 +181,41 @@ void main() {
     });
   });
 
-  test('monthly-on-31st pending rule: Feb 28 then re-lands Mar 31; idempotent', () async {
-    final int account = await seedAccount();
-    final int wallet = await seedWallet(account);
-    await seedRule(
-      walletId: wallet,
-      frequency: RecurrenceFrequency.monthly,
-      byMonthDay: 31,
-      startDate: DateTime(2026, 1, 31),
-    );
+  test(
+    'monthly-on-31st pending rule: Feb 28 then re-lands Mar 31; idempotent',
+    () async {
+      final int account = await seedAccount();
+      final int wallet = await seedWallet(account);
+      await seedRule(
+        walletId: wallet,
+        frequency: RecurrenceFrequency.monthly,
+        byMonthDay: 31,
+        startDate: DateTime(2026, 1, 31),
+      );
 
-    // now = Apr 1 2026 (non-leap): occurrences Jan 31, Feb 28, Mar 31.
-    final int inserted = await service.generateDueEntries(DateTime(2026, 4, 1));
-    expect(inserted, 3);
+      // now = Apr 1 2026 (non-leap): occurrences Jan 31, Feb 28, Mar 31.
+      final int inserted = await service.generateDueEntries(
+        DateTime(2026, 4, 1),
+      );
+      expect(inserted, 3);
 
-    final List<Transaction> rows = await txns();
-    final List<DateTime> dates = rows.map((t) => t.valueDate).toList()..sort();
-    expect(dates, <DateTime>[
-      DateTime(2026, 1, 31),
-      DateTime(2026, 2, 28),
-      DateTime(2026, 3, 31),
-    ]);
-    // All pending (autoPost=false), even though the dates are in the past.
-    expect(rows.every((t) => t.status == TransactionStatus.pending), isTrue);
+      final List<Transaction> rows = await txns();
+      final List<DateTime> dates = rows.map((t) => t.valueDate).toList()
+        ..sort();
+      expect(dates, <DateTime>[
+        DateTime(2026, 1, 31),
+        DateTime(2026, 2, 28),
+        DateTime(2026, 3, 31),
+      ]);
+      // All pending (autoPost=false), even though the dates are in the past.
+      expect(rows.every((t) => t.status == TransactionStatus.pending), isTrue);
 
-    // Re-run for the same now → zero new inserts (idempotency).
-    final int again = await service.generateDueEntries(DateTime(2026, 4, 1));
-    expect(again, 0);
-    expect((await txns()).length, 3);
-  });
+      // Re-run for the same now → zero new inserts (idempotency).
+      final int again = await service.generateDueEntries(DateTime(2026, 4, 1));
+      expect(again, 0);
+      expect((await txns()).length, 3);
+    },
+  );
 
   test('autoPost rule inserts completed rows and moves the balance', () async {
     final int account = await seedAccount();
@@ -273,7 +285,9 @@ void main() {
     await service.generateDueEntries(DateTime(2026, 1, 20)); // one occurrence
     final List<Transaction> rows = await txns();
     expect(rows.length, 1);
-    final cats = await db.transactionDao.getCategoriesForTransaction(rows.single.id);
+    final cats = await db.transactionDao.getCategoriesForTransaction(
+      rows.single.id,
+    );
     expect(cats.map((c) => c.id), <int>[cat]);
   });
 
@@ -291,30 +305,33 @@ void main() {
     expect(row.baseAmountMinor, 12345);
   });
 
-  test('cross-currency snapshot uses the cached rate as-of the value date', () async {
-    final int account = await seedAccount();
-    final int wallet = await seedWallet(account, code: 'USD');
-    // 1 USD = 30 TRY, effective 2026-01-01.
-    await db.exchangeRateDao.insertRate(
-      ExchangeRatesCompanion.insert(
-        baseCurrency: 'USD',
-        quoteCurrency: 'TRY',
-        rate: 30.0,
-        asOfDate: DateTime(2026, 1, 1),
-      ),
-    );
-    await seedRule(
-      walletId: wallet,
-      amountMinor: 1000, // 10.00 USD
-      code: 'USD',
-      startDate: DateTime(2026, 1, 10),
-    );
-    await service.generateDueEntries(DateTime(2026, 1, 20));
-    final Transaction row = (await txns()).single;
-    expect(row.currencyCode, 'USD');
-    expect(row.exchangeRateToBase, Decimal.parse('30'));
-    expect(row.baseAmountMinor, 30000); // 10 USD * 30 = 300.00 TRY
-  });
+  test(
+    'cross-currency snapshot uses the cached rate as-of the value date',
+    () async {
+      final int account = await seedAccount();
+      final int wallet = await seedWallet(account, code: 'USD');
+      // 1 USD = 30 TRY, effective 2026-01-01.
+      await db.exchangeRateDao.insertRate(
+        ExchangeRatesCompanion.insert(
+          baseCurrency: 'USD',
+          quoteCurrency: 'TRY',
+          rate: Decimal.parse('30.0'),
+          asOfDate: DateTime(2026, 1, 1),
+        ),
+      );
+      await seedRule(
+        walletId: wallet,
+        amountMinor: 1000, // 10.00 USD
+        code: 'USD',
+        startDate: DateTime(2026, 1, 10),
+      );
+      await service.generateDueEntries(DateTime(2026, 1, 20));
+      final Transaction row = (await txns()).single;
+      expect(row.currencyCode, 'USD');
+      expect(row.exchangeRateToBase, Decimal.parse('30'));
+      expect(row.baseAmountMinor, 30000); // 10 USD * 30 = 300.00 TRY
+    },
+  );
 
   test('a future startDate generates nothing', () async {
     final int account = await seedAccount();

@@ -189,8 +189,8 @@ void main() {
     expect(domain.toRow(), equals(row));
   });
 
-  test('ExchangeRateEntry: raw double rate round-trip', () async {
-    const double rate = 34.123456;
+  test('ExchangeRateEntry: Decimal rate round-trip', () async {
+    final Decimal rate = Decimal.parse('34.123456');
     final int id = await database.exchangeRateDao.insertRate(
       db.ExchangeRatesCompanion.insert(
         baseCurrency: 'USD',

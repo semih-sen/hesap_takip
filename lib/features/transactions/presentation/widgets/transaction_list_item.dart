@@ -59,7 +59,7 @@ class TransactionListItem extends StatelessWidget {
     return RepaintBoundary(
       child: Container(
         clipBehavior: Clip.antiAlias,
-        constraints: const BoxConstraints(minHeight: 76),
+        constraints: const BoxConstraints(minHeight: 70),
         decoration: BoxDecoration(
           color: backgroundColor,
           borderRadius: AppRadius.mdAll,
@@ -74,7 +74,7 @@ class TransactionListItem extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: AppSpacing.xs,
+                    vertical: AppSpacing.xs / 2,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -89,7 +89,7 @@ class TransactionListItem extends StatelessWidget {
                         amountText,
                         amountColor,
                       ),
-                      const SizedBox(height: 2),
+                      //const SizedBox(height: 1),
                       // ── Row 2: Date + status badges … Wallet name ──
                       _buildRow2(theme, semantic, l10n, dateText),
                       const SizedBox(height: 2),
@@ -381,7 +381,7 @@ class _CategoryChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
-        vertical: 3,
+        vertical: 2,
       ),
       decoration: BoxDecoration(
         color: dot.withValues(alpha: 0.14),
@@ -493,7 +493,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
-        vertical: 2,
+        //vertical: 1,
       ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),

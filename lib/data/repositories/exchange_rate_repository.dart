@@ -26,6 +26,9 @@ abstract interface class ExchangeRateRepository {
   /// Inserts [entry] (its `id` is DB-assigned) and returns the new row id.
   Future<int> addRate(ExchangeRateEntry entry);
 
+  /// Updates an existing cached rate.
+  Future<void> updateRate(ExchangeRateEntry entry);
+
   /// Deletes the cached rate with [id].
   Future<void> deleteRate(int id);
 }
@@ -61,6 +64,11 @@ class DriftExchangeRateRepository implements ExchangeRateRepository {
   @override
   Future<int> addRate(ExchangeRateEntry entry) =>
       _db.exchangeRateDao.insertRate(entry.toInsertCompanion());
+
+  @override
+  Future<void> updateRate(ExchangeRateEntry entry) async {
+    await _db.exchangeRateDao.updateRate(entry.toUpdateCompanion());
+  }
 
   @override
   Future<void> deleteRate(int id) => _db.exchangeRateDao.deleteRate(id);

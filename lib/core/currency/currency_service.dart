@@ -13,9 +13,8 @@ part 'currency_service.g.dart';
 /// The money/currency engine.
 ///
 /// Rounding is explicit half-up (ties away from zero) and applied exactly once
-/// at each conversion boundary. Monetary parsing/formatting uses [Decimal],
-/// while exchange-rate conversion intentionally applies the raw `double`
-/// multiplier without compensating for either currency's minor digits.
+/// at each conversion boundary. Monetary parsing/formatting and exchange-rate
+/// conversion use [Decimal].
 class CurrencyService {
   const CurrencyService(this._currencies);
 
@@ -64,12 +63,10 @@ class CurrencyService {
     required int amountMinor,
     required String fromCode,
     required String toCode,
-    required double rate,
+    required Decimal rate,
   }) {
     final Decimal major = fromMinor(amountMinor, fromCode);
-    final Decimal converted = Decimal.parse(
-      (major.toDouble() * rate).toString(),
-    );
+    final Decimal converted = major * rate;
     return toMinor(converted, toCode);
   }
 
@@ -110,10 +107,12 @@ Stream<List<Currency>> currencies(Ref ref) {
 /// still loading, preventing UI flashes.
 @Riverpod(keepAlive: true)
 CurrencyService currencyService(Ref ref) {
-  final AsyncValue<List<Currency>> asyncCurrencies =
-      ref.watch(currenciesProvider);
+  final AsyncValue<List<Currency>> asyncCurrencies = ref.watch(
+    currenciesProvider,
+  );
 
-  final List<Currency> currencies = asyncCurrencies.asData?.value ??
+  final List<Currency> currencies =
+      asyncCurrencies.asData?.value ??
       kDefaultCurrencies
           .map(
             (SeedCurrency c) => Currency(

@@ -4,16 +4,13 @@ import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
 
 void main() {
-  final CurrencyService service = CurrencyService(
-    const [
-  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
-
-],
-  );
+  final CurrencyService service = CurrencyService(const [
+    Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+    Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+    Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+    Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+    Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+  ]);
 
   group('registry lookup', () {
     test('known codes resolve; JPY has 0 minor digits', () {
@@ -128,7 +125,7 @@ void main() {
         amountMinor: 10000,
         fromCode: 'USD',
         toCode: 'TRY',
-        rate: 34.10,
+        rate: Decimal.parse('34.10'),
       );
       expect(result, 341000);
     });
@@ -139,7 +136,7 @@ void main() {
         amountMinor: 100,
         fromCode: 'USD',
         toCode: 'TRY',
-        rate: 2.005,
+        rate: Decimal.parse('2.005'),
       );
       expect(result, 201);
     });
@@ -150,19 +147,19 @@ void main() {
         amountMinor: 10000,
         fromCode: 'USD',
         toCode: 'JPY',
-        rate: 150.567,
+        rate: Decimal.parse('150.567'),
       );
       expect(result, 15057);
     });
 
-    test('raw double rate ignores source and target minor digit counts', () {
+    test('raw Decimal rate ignores source and target minor digit counts', () {
       // 100.00 USD at 150.5 is 15050 JPY. The rate is not shifted by USD's
       // 2 minor digits or JPY's 0 minor digits.
       final int result = service.convertMinor(
         amountMinor: 10000,
         fromCode: 'USD',
         toCode: 'JPY',
-        rate: 150.5,
+        rate: Decimal.parse('150.5'),
       );
       expect(result, 15050);
     });
@@ -173,7 +170,7 @@ void main() {
         amountMinor: 15000,
         fromCode: 'JPY',
         toCode: 'USD',
-        rate: 0.0066,
+        rate: Decimal.parse('0.0066'),
       );
       expect(result, 9900);
     });

@@ -14,6 +14,9 @@ class ExchangeRateDao extends DatabaseAccessor<AppDatabase>
   Future<int> insertRate(ExchangeRatesCompanion entry) =>
       into(exchangeRates).insert(entry);
 
+  Future<bool> updateRate(ExchangeRatesCompanion entry) =>
+      update(exchangeRates).replace(entry);
+
   Future<int> deleteRate(int id) =>
       (delete(exchangeRates)..where((t) => t.id.equals(id))).go();
 

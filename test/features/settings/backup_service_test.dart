@@ -159,7 +159,7 @@ void main() {
       ExchangeRatesCompanion.insert(
         baseCurrency: 'USD',
         quoteCurrency: 'TRY',
-        rate: 30.55,
+        rate: Decimal.parse('30.55'),
         asOfDate: DateTime(2026, 1, 1),
       ),
     );
@@ -172,73 +172,82 @@ void main() {
     return row.read<int>('c');
   }
 
-  test('export → import into a fresh DB round-trips every table exactly',
-      () async {
-    await seedRich(source);
-    final String json = await BackupService(source).exportToJson();
+  test(
+    'export → import into a fresh DB round-trips every table exactly',
+    () async {
+      await seedRich(source);
+      final String json = await BackupService(source).exportToJson();
 
-    final AppDatabase target = AppDatabase.forTesting(NativeDatabase.memory());
-    addTearDown(target.close);
-    await BackupService(target).importFromJson(json);
-
-    for (final String t in <String>[
-      'accounts',
-      'wallets',
-      'categories',
-      'transactions',
-      'transaction_categories',
-      'recurring_rules',
-      'recurring_rule_categories',
-      'exchange_rates',
-    ]) {
-      expect(
-        await count(target, t),
-        await count(source, t),
-        reason: 'row count mismatch for $t',
+      final AppDatabase target = AppDatabase.forTesting(
+        NativeDatabase.memory(),
       );
-    }
+      addTearDown(target.close);
+      await BackupService(target).importFromJson(json);
 
-    // Rate + key fields survive.
-    final ExchangeRate rate = await (target.select(
-      target.exchangeRates,
-    )).getSingle();
-    expect(rate.rate, 30.55);
+      for (final String t in <String>[
+        'accounts',
+        'wallets',
+        'categories',
+        'transactions',
+        'transaction_categories',
+        'recurring_rules',
+        'recurring_rule_categories',
+        'exchange_rates',
+      ]) {
+        expect(
+          await count(target, t),
+          await count(source, t),
+          reason: 'row count mismatch for $t',
+        );
+      }
 
-    // The self-referencing child still points at its parent.
-    final List<Transaction> children = await (target.select(
-      target.transactions,
-    )..where((t) => t.parentTransactionId.isNotNull())).get();
-    expect(children.length, 1);
-    expect(children.single.amountMinor, 300);
+      // Rate + key fields survive.
+      final ExchangeRate rate = await (target.select(
+        target.exchangeRates,
+      )).getSingle();
+      expect(rate.rate, Decimal.parse('30.55'));
 
-    // The transfer pair kept its shared group id.
-    final List<Transaction> legs = await (target.select(
-      target.transactions,
-    )..where((t) => t.transferGroupId.equals('grp-1'))).get();
-    expect(legs.length, 2);
-  });
+      // The self-referencing child still points at its parent.
+      final List<Transaction> children = await (target.select(
+        target.transactions,
+      )..where((t) => t.parentTransactionId.isNotNull())).get();
+      expect(children.length, 1);
+      expect(children.single.amountMinor, 300);
 
-  test('importing wipes pre-existing data first (replace, not merge)', () async {
-    await seedRich(source);
-    final String json = await BackupService(source).exportToJson();
+      // The transfer pair kept its shared group id.
+      final List<Transaction> legs = await (target.select(
+        target.transactions,
+      )..where((t) => t.transferGroupId.equals('grp-1'))).get();
+      expect(legs.length, 2);
+    },
+  );
 
-    final AppDatabase target = AppDatabase.forTesting(NativeDatabase.memory());
-    addTearDown(target.close);
-    // Pre-seed the target with unrelated data.
-    await target.accountDao.createAccount(
-      AccountsCompanion.insert(
-        name: 'Silinecek',
-        type: AccountType.cash,
-        colorValue: 0xFF999999,
-        iconCodePoint: 0xE099,
-      ),
-    );
+  test(
+    'importing wipes pre-existing data first (replace, not merge)',
+    () async {
+      await seedRich(source);
+      final String json = await BackupService(source).exportToJson();
 
-    await BackupService(target).importFromJson(json);
+      final AppDatabase target = AppDatabase.forTesting(
+        NativeDatabase.memory(),
+      );
+      addTearDown(target.close);
+      // Pre-seed the target with unrelated data.
+      await target.accountDao.createAccount(
+        AccountsCompanion.insert(
+          name: 'Silinecek',
+          type: AccountType.cash,
+          colorValue: 0xFF999999,
+          iconCodePoint: 0xE099,
+        ),
+      );
 
-    final List<Account> accounts = await target.select(target.accounts).get();
-    expect(accounts.map((Account a) => a.name), <String>['Banka']);
-  });
+      await BackupService(target).importFromJson(json);
+
+      final List<Account> accounts = await target.select(target.accounts).get();
+      expect(accounts.map((Account a) => a.name), <String>['Banka']);
+    },
+  );
 
   test('base currency setting round-trips', () async {
     await source.settingsDao.updateBaseCurrency('EUR');

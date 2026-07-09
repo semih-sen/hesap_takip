@@ -33,6 +33,7 @@ part 'app_database.g.dart';
 ///   (a partial-payment child's contribution in its parent's currency).
 /// - v5: stores cached exchange rates as SQLite REAL/double instead of text.
 /// - v6: adds AppSettings.primaryCurrencyCode for list-row equivalents.
+/// - v7: stores cached exchange rates as Decimal text again.
 @DriftDatabase(
   tables: [
     Accounts,
@@ -65,7 +66,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -95,6 +96,9 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'UPDATE app_settings SET primary_currency_code = base_currency_code',
         );
+      }
+      if (from < 7) {
+        await _migrateExchangeRatesToText(m);
       }
     },
     beforeOpen: (OpeningDetails details) async {
@@ -170,6 +174,20 @@ class AppDatabase extends _$AppDatabase {
       'INSERT INTO exchange_rates '
       '(id, base_currency, quote_currency, rate, as_of_date, source) '
       'SELECT id, base_currency, quote_currency, CAST(rate AS REAL), '
+      'as_of_date, source FROM exchange_rates_old;',
+    );
+    await customStatement('DROP TABLE exchange_rates_old;');
+  }
+
+  Future<void> _migrateExchangeRatesToText(Migrator m) async {
+    await customStatement(
+      'ALTER TABLE exchange_rates RENAME TO exchange_rates_old;',
+    );
+    await m.createTable(exchangeRates);
+    await customStatement(
+      'INSERT INTO exchange_rates '
+      '(id, base_currency, quote_currency, rate, as_of_date, source) '
+      'SELECT id, base_currency, quote_currency, CAST(rate AS TEXT), '
       'as_of_date, source FROM exchange_rates_old;',
     );
     await customStatement('DROP TABLE exchange_rates_old;');

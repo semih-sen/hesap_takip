@@ -20,16 +20,13 @@ void main() {
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
-    currency = CurrencyService(
-      const [
-  Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
-  Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
-  Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
-
-],
-    );
+    currency = CurrencyService(const [
+      Currency(code: 'TRY', symbol: '₺', minorDigits: 2, symbolOnLeft: false),
+      Currency(code: 'USD', symbol: '\$', minorDigits: 2, symbolOnLeft: true),
+      Currency(code: 'EUR', symbol: '€', minorDigits: 2, symbolOnLeft: false),
+      Currency(code: 'GBP', symbol: '£', minorDigits: 2, symbolOnLeft: true),
+      Currency(code: 'JPY', symbol: '¥', minorDigits: 0, symbolOnLeft: true),
+    ]);
     repo = DriftTransactionRepository(db, currency);
   });
 
@@ -216,7 +213,7 @@ void main() {
         amountMinor: amountMinor,
         fromCode: 'TRY',
         toCode: 'TRY',
-        rate: 1.0,
+        rate: Decimal.one,
       );
       final int id = await repo.createTransactionWithCategories(
         transaction: expenseTxn(
@@ -237,13 +234,12 @@ void main() {
       final int accountId = await seedAccount();
       final int walletId = await seedWallet(accountId, code: 'USD');
       final Decimal rate = Decimal.parse('30');
-      final double rawRate = 30.0;
       final int amountMinor = 1000; // $10.00
       final int expectedBase = currency.convertMinor(
         amountMinor: amountMinor,
         fromCode: 'USD',
         toCode: 'TRY',
-        rate: rawRate,
+        rate: rate,
       );
 
       final int id = await repo.createTransactionWithCategories(

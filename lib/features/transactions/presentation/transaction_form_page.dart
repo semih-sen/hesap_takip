@@ -61,6 +61,8 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   final List<int> _categoryIds = <int>[]; // ordered → last absorbs remainder
   bool _splitEnabled = false;
   bool _saving = false;
+  bool _hasCachedRate = false;
+  bool _rateFieldVisible = false;
 
   /// True until an edited transaction has been loaded (prefill).
   bool _loading = false;
@@ -125,6 +127,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           .toString();
       if (txn.currencyCode != base) {
         _rateController.text = txn.exchangeRateToBase.toString();
+        _rateFieldVisible = true;
       }
       _noteController.text = txn.note ?? '';
       _payeeController.text = txn.payee ?? '';
@@ -189,13 +192,17 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
 
   Future<void> _prefillRate(Wallet wallet, String base) async {
     if (wallet.currencyCode == base) {
-      _rateController.text = '';
+      setState(() {
+        _rateController.text = '';
+        _hasCachedRate = false;
+        _rateFieldVisible = false;
+      });
       return;
     }
     final ExchangeRateEntryLookup lookup = ExchangeRateEntryLookup(
       ref.read(exchangeRateRepositoryProvider),
     );
-    final double? cached = await lookup.rate(
+    final Decimal? cached = await lookup.rate(
       wallet.currencyCode,
       base,
       _valueDate,
@@ -203,7 +210,11 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     if (!mounted) {
       return;
     }
-    _rateController.text = (cached ?? 1.0).toString();
+    setState(() {
+      _hasCachedRate = cached != null;
+      _rateFieldVisible = cached == null;
+      _rateController.text = (cached ?? Decimal.one).toString();
+    });
   }
 
   Future<void> _pickDate() async {
@@ -216,6 +227,13 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     );
     if (picked != null && mounted) {
       setState(() => _valueDate = AppDate.dateOnly(picked));
+      final List<Wallet> wallets =
+          ref.read(allWalletsProvider).asData?.value ?? const <Wallet>[];
+      final Wallet? wallet = _selectedWallet(wallets);
+      final String base = ref.read(baseCurrencyProvider);
+      if (wallet != null && !_isEdit) {
+        await _prefillRate(wallet, base);
+      }
     }
   }
 
@@ -237,12 +255,12 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
     final int amountMinor = _currency.toMinor(amount, currencyCode);
     final Decimal rate = currencyCode == base
         ? Decimal.one
-        : (parseTurkishAmount(_rateController.text) ?? Decimal.one);
+        : (parseExchangeRateAmount(_rateController.text) ?? Decimal.one);
     final int baseAmountMinor = _currency.convertMinor(
       amountMinor: amountMinor,
       fromCode: currencyCode,
       toCode: base,
-      rate: rate.toDouble(),
+      rate: rate,
     );
     final DateTime now = DateTime.now();
 
@@ -548,27 +566,41 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
           ),
           if (needsRate) ...<Widget>[
             const SizedBox(height: AppSpacing.lg),
-            TextFormField(
-              controller: _rateController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+            if (_hasCachedRate)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Kayıtlı kur kullanılıyor'),
+                subtitle: Text(
+                  _rateSummary(currencyCode, base),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                value: _rateFieldVisible,
+                onChanged: (bool value) =>
+                    setState(() => _rateFieldVisible = value),
               ),
-              decoration: InputDecoration(
-                labelText: l10n.transactionRateLabel(currencyCode, base),
-                helperText: _basePreview(currencyCode, base),
-                border: const OutlineInputBorder(),
-              ),
-              validator: (String? value) {
-                if (!needsRate) {
+            if (!_hasCachedRate || _rateFieldVisible)
+              TextFormField(
+                controller: _rateController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(
+                  labelText: l10n.transactionRateLabel(currencyCode, base),
+                  helperText: _basePreview(currencyCode, base),
+                  border: const OutlineInputBorder(),
+                ),
+                validator: (String? value) {
+                  if (!needsRate) {
+                    return null;
+                  }
+                  final Decimal? parsed = parseExchangeRateAmount(value ?? '');
+                  if (parsed == null || parsed <= Decimal.zero) {
+                    return l10n.validationInvalidRate;
+                  }
                   return null;
-                }
-                final Decimal? parsed = parseTurkishAmount(value ?? '');
-                if (parsed == null || parsed <= Decimal.zero) {
-                  return l10n.validationInvalidRate;
-                }
-                return null;
-              },
-            ),
+                },
+              ),
           ],
           const SizedBox(height: AppSpacing.lg),
           // ----- Value date -----
@@ -684,7 +716,7 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
   /// The live "≈ {baseAmount}" preview shown under the rate field.
   String? _basePreview(String currencyCode, String base) {
     final Decimal? amount = parseTurkishAmount(_amountController.text);
-    final Decimal? rate = parseTurkishAmount(_rateController.text);
+    final Decimal? rate = parseExchangeRateAmount(_rateController.text);
     if (amount == null ||
         amount <= Decimal.zero ||
         rate == null ||
@@ -696,20 +728,28 @@ class _TransactionFormPageState extends ConsumerState<TransactionFormPage> {
       amountMinor: amountMinor,
       fromCode: currencyCode,
       toCode: base,
-      rate: rate.toDouble(),
+      rate: rate,
     );
     return '≈ ${_currency.format(baseMinor, base)}';
   }
+
+  String _rateSummary(String currencyCode, String base) {
+    final String rate = _rateController.text.trim();
+    final String? preview = _basePreview(currencyCode, base);
+    if (preview == null) {
+      return rate.isEmpty ? '' : '$currencyCode → $base: $rate';
+    }
+    return '$currencyCode → $base: $rate · $preview';
+  }
 }
 
-/// Thin adapter turning an [ExchangeRateRepository] lookup into a plain
-/// double rate (or null), keeping the form's prefill logic terse.
+/// Thin adapter keeping the form's rate prefill logic terse.
 class ExchangeRateEntryLookup {
   const ExchangeRateEntryLookup(this._repo);
 
   final ExchangeRateRepository _repo;
 
-  Future<double?> rate(String from, String to, DateTime onOrBefore) async {
+  Future<Decimal?> rate(String from, String to, DateTime onOrBefore) async {
     final entry = await _repo.latestRate(from, to, onOrBefore: onOrBefore);
     return entry?.rate;
   }
