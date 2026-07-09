@@ -80,7 +80,7 @@ class _TransactionListViewState extends ConsumerState<TransactionListView> {
   /// transfer form (routed by `transferGroupId`), everything else via the
   /// income/expense form.
   Future<void> _edit(TransactionListRow row) async {
-    if (row.type == TransactionType.transfer) {
+    if (row.isTransferGenerated) {
       final TransactionRepository repo = ref.read(
         transactionRepositoryProvider,
       );

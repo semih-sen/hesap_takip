@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hesap_takip/app/app.dart';
 import 'package:hesap_takip/data/database/app_database.dart';
 import 'package:hesap_takip/data/database/app_database_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 void main() {
   testWidgets('boots in dark theme with Turkish navigation and switches tabs', (
@@ -15,6 +16,13 @@ void main() {
     // which drives Drift's real async via runAsync.)
     final AppDatabase db = AppDatabase.forTesting(NativeDatabase.memory());
     addTearDown(db.close);
+    PackageInfo.setMockInitialValues(
+      appName: 'Hesap Takip',
+      packageName: 'com.example.hesap_takip',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
 
     // Own the container and dispose it in addTearDown (after the pending-timer
     // check) so the dashboard's live Drift list stream — kept alive by the
@@ -62,5 +70,16 @@ void main() {
     await tester.tap(find.text('Ayarlar'));
     await tester.pumpAndSettle();
     expect(find.text('Ana para birimi'), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Hakkında'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Hakkında'), findsOneWidget);
+    expect(find.text('Geliştirici'), findsOneWidget);
+    expect(find.text('H.S.Ş.'), findsOneWidget);
+    expect(find.text('Uygulama sürümü'), findsOneWidget);
+    expect(find.text('1.0.0 (1)'), findsOneWidget);
   });
 }

@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hesap_takip/core/currency/currency_service.dart';
 import 'package:hesap_takip/core/currency/currency.dart';
 import 'package:hesap_takip/core/date/date_range.dart';
-import 'package:hesap_takip/data/database/seed.dart';
 import 'package:hesap_takip/core/undo/entity_actions.dart';
 import 'package:hesap_takip/core/undo/pending_action_queue.dart';
 import 'package:hesap_takip/core/undo/undo_service.dart';
@@ -25,12 +24,12 @@ void main() {
   late DriftTransactionRepository repo;
 
   late CurrencyService currency;
-  final DateTime date = DateTime(2026, 7, 10);
+  final DateTime date = DateTime(2020, 7, 10);
   final DateRange july = DateRange(
-    start: DateTime(2026, 7, 1),
-    end: DateTime(2026, 7, 31),
+    start: DateTime(2020, 7, 1),
+    end: DateTime(2020, 7, 31),
   );
-  final DateTime endOfJuly = DateTime(2026, 7, 31);
+  final DateTime endOfJuly = DateTime(2020, 7, 31);
 
   setUp(() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
@@ -150,6 +149,96 @@ void main() {
   );
 
   test(
+    'future cross-account transfer stays pending as payable and receivable',
+    () async {
+      final int fromAccount = await db.accountDao.createAccount(
+        AccountsCompanion.insert(
+          name: 'Banka1',
+          type: AccountType.bank,
+          colorValue: 0xFF000000,
+          iconCodePoint: 0xE000,
+        ),
+      );
+      final int toAccount = await db.accountDao.createAccount(
+        AccountsCompanion.insert(
+          name: 'Banka2',
+          type: AccountType.bank,
+          colorValue: 0xFF111111,
+          iconCodePoint: 0xE001,
+        ),
+      );
+      final int fromWallet = await seedWallet(fromAccount);
+      final int toWallet = await seedWallet(toAccount);
+      final DateTime futureDate = DateTime(2099, 1, 10);
+      final DateRange futurePeriod = DateRange(
+        start: DateTime(2099, 1, 1),
+        end: DateTime(2099, 1, 31),
+      );
+
+      final String groupId = await service.createTransfer(
+        fromWalletId: fromWallet,
+        toWalletId: toWallet,
+        fromAmountMinor: 12000,
+        toAmountMinor: 12000,
+        rate: Decimal.one,
+        valueDate: futureDate,
+      );
+
+      final List<Transaction> legs = await db.transactionDao.getTransferLegs(
+        groupId,
+      );
+      final Transaction out = legs.firstWhere(
+        (Transaction l) => l.flowDirection == FlowDirection.outflow,
+      );
+      final Transaction into = legs.firstWhere(
+        (Transaction l) => l.flowDirection == FlowDirection.inflow,
+      );
+
+      expect(out.type, TransactionType.expense);
+      expect(out.status, TransactionStatus.pending);
+      expect(into.type, TransactionType.income);
+      expect(into.status, TransactionStatus.pending);
+      expect(await balance(fromWallet), 0);
+      expect(await balance(toWallet), 0);
+
+      final SummaryData summary = await repo
+          .watchSummary(
+            walletIds: const <int>{},
+            period: futurePeriod,
+            today: DateTime(2099, 1, 1),
+          )
+          .first;
+
+      expect(summary.payableExpenseMinor, 12000);
+      expect(summary.receivableIncomeMinor, 12000);
+      expect(summary.paidExpenseMinor, 0);
+      expect(summary.collectedIncomeMinor, 0);
+      expect(summary.currentCashMinor, 0);
+
+      await service.updateTransfer(
+        transferGroupId: groupId,
+        fromWalletId: fromWallet,
+        toWalletId: toWallet,
+        fromAmountMinor: 12000,
+        toAmountMinor: 12000,
+        rate: Decimal.one,
+        valueDate: DateTime(2020, 1, 10),
+      );
+
+      final List<Transaction> editedLegs = await db.transactionDao
+          .getTransferLegs(groupId);
+      expect(
+        editedLegs.every(
+          (Transaction leg) => leg.status == TransactionStatus.pending,
+        ),
+        isTrue,
+      );
+      expect(await balance(fromWallet), 0);
+      expect(await balance(toWallet), 0);
+    },
+  );
+
+  test(
     'transfers stay out of summary flows; move Row-1 cash per Decision 2A',
     () async {
       final int account = await seedAccount();
@@ -166,7 +255,7 @@ void main() {
           currencyCode: 'TRY',
           exchangeRateToBase: Decimal.one,
           baseAmountMinor: 30000,
-          valueDate: DateTime(2026, 7, 5),
+          valueDate: DateTime(2020, 7, 5),
         ),
       );
 

@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/currency/currency_service.dart';
+import '../../../core/date/app_date.dart';
 import '../../../data/database/app_database.dart';
 import '../../../data/database/app_database_provider.dart';
 import '../../../data/database/tables/enums.dart';
@@ -73,6 +74,7 @@ class TransferService {
     );
     final String groupId = _uuid.v4();
     final String base = (await _db.settingsDao.getSettings()).baseCurrencyCode;
+    final TransactionStatus status = _statusForTransferValueDate(valueDate);
 
     await _db.transaction(() async {
       await _insertLegs(
@@ -83,6 +85,7 @@ class TransferService {
         toAmountMinor: toAmountMinor,
         valueDate: valueDate,
         note: note,
+        status: status,
       );
     });
     return groupId;
@@ -108,6 +111,14 @@ class TransferService {
       toAmountMinor: toAmountMinor,
     );
     final String base = (await _db.settingsDao.getSettings()).baseCurrencyCode;
+    final List<Transaction> existingLegs = await _db.transactionDao
+        .getTransferLegs(transferGroupId);
+    final bool keepPending = existingLegs.any(
+      (Transaction leg) => leg.status == TransactionStatus.pending,
+    );
+    final TransactionStatus status = keepPending
+        ? TransactionStatus.pending
+        : _statusForTransferValueDate(valueDate);
 
     await _db.transaction(() async {
       await _db.transactionDao.deleteTransferGroup(transferGroupId);
@@ -119,6 +130,7 @@ class TransferService {
         toAmountMinor: toAmountMinor,
         valueDate: valueDate,
         note: note,
+        status: status,
       );
     });
   }
@@ -176,6 +188,7 @@ class TransferService {
     required int toAmountMinor,
     required DateTime valueDate,
     required String? note,
+    required TransactionStatus status,
   }) async {
     final Account? fromAccount = await _db.accountDao.getAccountById(
       wallets.from.accountId,
@@ -195,7 +208,6 @@ class TransferService {
     final String effectiveNote = userNote == null || userNote.isEmpty
         ? transferDetail
         : '$userNote\n$transferDetail';
-
     // OUT leg — source wallet, its own currency → base snapshot.
     final Decimal outRate = await _rateToBase(
       wallets.from.currencyCode,
@@ -221,6 +233,7 @@ class TransferService {
         valueDate: valueDate,
         note: effectiveNote,
         groupId: groupId,
+        status: status,
       ),
     );
     // IN leg — destination wallet, its own currency → base snapshot.
@@ -248,6 +261,7 @@ class TransferService {
         valueDate: valueDate,
         note: effectiveNote,
         groupId: groupId,
+        status: status,
       ),
     );
   }
@@ -263,12 +277,13 @@ class TransferService {
     required DateTime valueDate,
     required String? note,
     required String groupId,
+    required TransactionStatus status,
   }) {
     return TransactionsCompanion.insert(
       walletId: walletId,
       type: type,
       flowDirection: flow,
-      status: TransactionStatus.completed,
+      status: status,
       amountMinor: amountMinor,
       currencyCode: currencyCode,
       exchangeRateToBase: rateToBase,
@@ -361,6 +376,11 @@ class TransferService {
     }
     return trimmed;
   }
+
+  TransactionStatus _statusForTransferValueDate(DateTime valueDate) =>
+      valueDate.isAfter(AppDate.today())
+      ? TransactionStatus.pending
+      : TransactionStatus.completed;
 }
 
 /// The validated source/destination wallet rows for a transfer.

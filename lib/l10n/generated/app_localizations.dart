@@ -1336,6 +1336,30 @@ abstract class AppLocalizations {
   /// **'Genel'**
   String get settingsSectionGeneral;
 
+  /// Settings section header for app/about information.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hakkında'**
+  String get settingsAboutLabel;
+
+  /// Settings row: app developer.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geliştirici'**
+  String get settingsDeveloperLabel;
+
+  /// Settings row: app version.
+  ///
+  /// In tr, this message translates to:
+  /// **'Uygulama sürümü'**
+  String get settingsAppVersionLabel;
+
+  /// Version and build number shown in settings.
+  ///
+  /// In tr, this message translates to:
+  /// **'{version} ({buildNumber})'**
+  String settingsAppVersionValue(String version, String buildNumber);
+
   /// Title of the base-currency change confirmation dialog.
   ///
   /// In tr, this message translates to:

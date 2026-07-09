@@ -674,6 +674,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsSectionGeneral => 'Genel';
 
   @override
+  String get settingsAboutLabel => 'Hakkında';
+
+  @override
+  String get settingsDeveloperLabel => 'Geliştirici';
+
+  @override
+  String get settingsAppVersionLabel => 'Uygulama sürümü';
+
+  @override
+  String settingsAppVersionValue(String version, String buildNumber) {
+    return '$version ($buildNumber)';
+  }
+
+  @override
   String get baseCurrencyChangeWarningTitle => 'Ana para birimini değiştir';
 
   @override

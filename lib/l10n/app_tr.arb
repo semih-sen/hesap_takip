@@ -505,6 +505,20 @@
   "@settingsBackupImport": { "description": "Settings row: import/restore a backup." },
   "settingsSectionGeneral": "Genel",
   "@settingsSectionGeneral": { "description": "Settings section header for general preferences." },
+  "settingsAboutLabel": "Hakkında",
+  "@settingsAboutLabel": { "description": "Settings section header for app/about information." },
+  "settingsDeveloperLabel": "Geliştirici",
+  "@settingsDeveloperLabel": { "description": "Settings row: app developer." },
+  "settingsAppVersionLabel": "Uygulama sürümü",
+  "@settingsAppVersionLabel": { "description": "Settings row: app version." },
+  "settingsAppVersionValue": "{version} ({buildNumber})",
+  "@settingsAppVersionValue": {
+    "description": "Version and build number shown in settings.",
+    "placeholders": {
+      "version": { "type": "String" },
+      "buildNumber": { "type": "String" }
+    }
+  },
 
   "baseCurrencyChangeWarningTitle": "Ana para birimini değiştir",
   "@baseCurrencyChangeWarningTitle": { "description": "Title of the base-currency change confirmation dialog." },

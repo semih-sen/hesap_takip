@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:hesap_takip/app/theme/app_spacing.dart';
@@ -26,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String current = ref.read(baseCurrencyProvider);
     final CurrencyService currencyService = ref.read(currencyServiceProvider);
-    
+
     final List<String> codes = <String>[
       for (final Currency c in currencyService.all) c.code,
     ]..sort();
@@ -116,9 +117,9 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _openCurrencies(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const CurrenciesScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const CurrenciesScreen()));
   }
 
   Future<void> _export(BuildContext context, WidgetRef ref) async {
@@ -127,9 +128,7 @@ class SettingsScreen extends ConsumerWidget {
     try {
       final String json = await ref.read(backupServiceProvider).exportToJson();
       final Uint8List bytes = Uint8List.fromList(utf8.encode(json));
-      final String stamp = DateFormat(
-        'yyyyMMdd_HHmmss',
-      ).format(DateTime.now());
+      final String stamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final String fileName = 'hesap_takip_backup_$stamp.json';
 
       final String? path = await FilePicker.saveFile(
@@ -184,7 +183,8 @@ class SettingsScreen extends ConsumerWidget {
     }
     final PlatformFile file = result.files.first;
     final Uint8List? bytes =
-        file.bytes ?? (file.path != null ? File(file.path!).readAsBytesSync() : null);
+        file.bytes ??
+        (file.path != null ? File(file.path!).readAsBytesSync() : null);
     if (bytes == null || !context.mounted) {
       return;
     }
@@ -315,6 +315,32 @@ class SettingsScreen extends ConsumerWidget {
               leading: const Icon(Icons.download),
               title: Text(l10n.settingsBackupImport),
               onTap: () => _import(context, ref),
+            ),
+            const Divider(),
+            _SectionHeader(l10n.settingsAboutLabel),
+            ListTile(
+              leading: const Icon(Icons.code),
+              title: Text(l10n.settingsDeveloperLabel),
+              subtitle: const Text('H.S.Ş.'),
+            ),
+            FutureBuilder<PackageInfo>(
+              future: PackageInfo.fromPlatform(),
+              builder:
+                  (BuildContext context, AsyncSnapshot<PackageInfo> snapshot) {
+                    final PackageInfo? info = snapshot.data;
+                    return ListTile(
+                      leading: const Icon(Icons.info_outline),
+                      title: Text(l10n.settingsAppVersionLabel),
+                      subtitle: Text(
+                        info == null
+                            ? '-'
+                            : l10n.settingsAppVersionValue(
+                                info.version,
+                                info.buildNumber,
+                              ),
+                      ),
+                    );
+                  },
             ),
           ],
         ),
